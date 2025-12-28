@@ -1,0 +1,8 @@
+{
+  "name": "ComplaintOps Copilot",
+  "description": "A high-fidelity AI-powered dashboard for banking complaint resolution specialists, featuring real-time analysis, PII masking, and automated response generation.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
