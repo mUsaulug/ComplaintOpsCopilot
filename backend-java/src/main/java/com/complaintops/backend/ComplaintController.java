@@ -84,7 +84,7 @@ public class ComplaintController {
         Complaint complaint = orchestratorService.getComplaint(id);
 
         try {
-            var webClient = webClientBuilder.baseUrl(aiServiceUrl).build();
+            var webClient = webClientBuilder.baseUrl(java.util.Objects.requireNonNull(aiServiceUrl)).build();
             var response = webClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .path("/similar/{id}")
@@ -125,7 +125,7 @@ public class ComplaintController {
             complaint.setCustomerReplyDraft(request.getCustomerReplyDraft());
         }
 
-        return ResponseEntity.ok(complaintRepository.save(complaint));
+        return ResponseEntity.ok(complaintRepository.save(java.util.Objects.requireNonNull(complaint)));
     }
 
     @GetMapping("/complaints/{id}/edit-history")
@@ -144,12 +144,12 @@ public class ComplaintController {
         // If has review_id, call Python to update review status
         if (complaint.getReviewId() != null) {
             try {
-                var webClient = webClientBuilder.baseUrl(aiServiceUrl).build();
+                var webClient = webClientBuilder.baseUrl(java.util.Objects.requireNonNull(aiServiceUrl)).build();
                 webClient.post()
                         .uri("/review/approve")
-                        .bodyValue(java.util.Map.of(
+                        .bodyValue(java.util.Objects.requireNonNull(java.util.Map.of(
                                 "review_id", complaint.getReviewId(),
-                                "notes", request != null && request.getNotes() != null ? request.getNotes() : ""))
+                                "notes", request != null && request.getNotes() != null ? request.getNotes() : "")))
                         .retrieve()
                         .toBodilessEntity()
                         .block();
@@ -172,12 +172,12 @@ public class ComplaintController {
         // If has review_id, call Python to update review status
         if (complaint.getReviewId() != null) {
             try {
-                var webClient = webClientBuilder.baseUrl(aiServiceUrl).build();
+                var webClient = webClientBuilder.baseUrl(java.util.Objects.requireNonNull(aiServiceUrl)).build();
                 webClient.post()
                         .uri("/review/reject")
-                        .bodyValue(java.util.Map.of(
+                        .bodyValue(java.util.Objects.requireNonNull(java.util.Map.of(
                                 "review_id", complaint.getReviewId(),
-                                "notes", request != null && request.getNotes() != null ? request.getNotes() : ""))
+                                "notes", request != null && request.getNotes() != null ? request.getNotes() : "")))
                         .retrieve()
                         .toBodilessEntity()
                         .block();
