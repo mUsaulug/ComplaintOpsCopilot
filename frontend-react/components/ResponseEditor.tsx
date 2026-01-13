@@ -68,16 +68,28 @@ const ResponseEditor: React.FC<Props> = ({ suggestion, onTextChange }) => {
       </div>
 
       <div className="mt-4">
-        <p className="text-[10px] text-slate-400 font-bold uppercase mb-3">İlişkili Kaynaklar</p>
-        <div className="flex flex-wrap gap-2">
+        <p className="text-[10px] text-slate-400 font-bold uppercase mb-3">Kanıt Kartları</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {suggestion.kbArticles.map((article) => (
-            <div 
+            <div
               key={article.id}
-              className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 rounded-full border border-zinc-200 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-200 transition-colors cursor-pointer"
+              className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow"
             >
-              <Icons.Shield />
-              {article.title}
-              <span className="text-zinc-400 font-mono">{(article.relevance * 100).toFixed(0)}%</span>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                  <Icons.Shield />
+                  {article.title}
+                </div>
+                <span className="text-[10px] font-bold text-blue-600">
+                  %{(article.relevance * 100).toFixed(0)}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 leading-relaxed min-h-[40px]">
+                {article.summary || "Kaynak özeti bulunamadı."}
+              </p>
+              <div className="mt-2 text-[10px] text-slate-400 font-mono">
+                {article.source || "Kaynak: Bilinmiyor"}
+              </div>
             </div>
           ))}
         </div>

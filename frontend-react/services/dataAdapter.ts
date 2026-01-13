@@ -42,7 +42,9 @@ export function adaptBackendResponse(backend: BackendComplaintResponse): {
     kbArticles: (backend.kaynaklar || []).map((k, index) => ({
       id: `doc-${index}`,
       title: k.dokuman_adi || 'Bilinmeyen Doküman',
-      relevance: 1.0 // Backend doesn't return score per source in summary, default to 1
+      relevance: 1.0, // Backend doesn't return score per source in summary, default to 1
+      summary: k.ozet,
+      source: k.kaynak
     }))
   };
 

@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.ArrayList;
+import java.time.Duration;
 
 @RestController
 @RequestMapping("/api")
@@ -21,6 +22,7 @@ public class ComplaintController {
     private final ComplaintRepository complaintRepository;
     private final ComplaintEditRepository editRepository;
     private final org.springframework.web.reactive.function.client.WebClient.Builder webClientBuilder;
+    private static final Duration SERVICE_TIMEOUT = Duration.ofSeconds(10);
 
     @org.springframework.beans.factory.annotation.Value("${ai-service.url}")
     private String aiServiceUrl;
@@ -94,7 +96,7 @@ public class ComplaintController {
                             .build(id))
                     .retrieve()
                     .bodyToMono(java.util.Map.class)
-                    .block();
+                    .block(SERVICE_TIMEOUT);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.ok(java.util.Map.of(
@@ -153,7 +155,7 @@ public class ComplaintController {
                                 "notes", request != null && request.getNotes() != null ? request.getNotes() : "")))
                         .retrieve()
                         .toBodilessEntity()
-                        .block();
+                        .block(SERVICE_TIMEOUT);
             } catch (Exception e) {
                 // Log but don't fail - Python review is optional
             }
@@ -181,7 +183,7 @@ public class ComplaintController {
                                 "notes", request != null && request.getNotes() != null ? request.getNotes() : "")))
                         .retrieve()
                         .toBodilessEntity()
-                        .block();
+                        .block(SERVICE_TIMEOUT);
             } catch (Exception e) {
                 // Log but don't fail
             }

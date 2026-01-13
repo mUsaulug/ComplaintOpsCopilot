@@ -78,6 +78,8 @@ export interface KBArticle {
   id: string;
   title: string;
   relevance: number;
+  summary?: string;
+  source?: string;
 }
 
 export interface AnalysisResult {

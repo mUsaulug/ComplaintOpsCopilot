@@ -55,7 +55,7 @@ const AIInsightCard: React.FC<Props> = ({ analysis, isLoading, needsHumanReview 
           </div>
           <div>
             <h3 className="text-sm font-bold text-slate-900 uppercase tracking-tight">AI Analiz Paneli</h3>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Model: Gemini 3 Flash</p>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Model: Backend LLM</p>
           </div>
         </div>
 

@@ -52,6 +52,8 @@ public class DTOs {
     @NoArgsConstructor
     public static class RAGRequest {
         private String text;
+
+        private String category;
     }
 
     @Data
@@ -85,6 +87,9 @@ public class DTOs {
 
         @JsonProperty("sources")
         private List<SourceItem> sources;
+
+        @JsonProperty("error_code")
+        private String errorCode;
     }
 
     @Data
@@ -121,5 +126,8 @@ public class DTOs {
 
         @JsonProperty("review_status")
         private String reviewStatus;
+
+        @JsonProperty("model_loaded")
+        private boolean modelLoaded;
     }
 }
