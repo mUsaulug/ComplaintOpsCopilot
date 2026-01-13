@@ -96,14 +96,13 @@ class OpenAIProvider(AbstractLLMProvider):
         return validated.model_dump()
 
     def _detect_pii(self, text: str) -> bool:
-        # Simple local check or re-import if needed. 
-        # For simplicity in this refactor, we can assume the caller might handle PII or we duplicate logic.
-        # The original code imported from pii_masker here.
+        """Detect if text contains PII using the masking service."""
         try:
-            from pii_masker import masker
+            from app.services.masking_service import masker
             result = masker.mask(text)
             return result["masked_text"] != text
-        except ImportError:
+        except Exception:
+            logger.warning("PII detection failed, assuming no PII")
             return False
 
     def generate_response(self, text: str, category: str, urgency: str, snippets: list) -> dict:

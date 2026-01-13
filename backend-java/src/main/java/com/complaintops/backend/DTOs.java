@@ -56,8 +56,8 @@ public class DTOs {
 
     @Data
     public static class RAGResponse {
-        @JsonProperty("relevant_snippets")
-        private List<String> relevantSnippets;
+        @JsonProperty("relevant_sources")
+        private List<SourceItem> relevantSources;
     }
 
     @Data
@@ -68,8 +68,8 @@ public class DTOs {
         private String category;
         private String urgency;
 
-        @JsonProperty("relevant_snippets")
-        private List<String> relevantSnippets;
+        @JsonProperty("relevant_sources")
+        private List<SourceItem> relevantSources;
     }
 
     @Data

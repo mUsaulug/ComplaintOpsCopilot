@@ -164,16 +164,17 @@ class KvkkComplianceTest {
                 .thenReturn(Mono.just(maskResp));
 
         // Mock triage
-        DTOs.TriageResponse triageResp = new DTOs.TriageResponse();
+        DTOs.TriageResponseFull triageResp = new DTOs.TriageResponseFull();
         triageResp.setCategory("FRAUD_UNAUTHORIZED_TX");
         triageResp.setUrgency("HIGH");
+        triageResp.setNeedsHumanReview(false);
 
-        when(responseSpec.bodyToMono(DTOs.TriageResponse.class))
+        when(responseSpec.bodyToMono(DTOs.TriageResponseFull.class))
                 .thenReturn(Mono.just(triageResp));
 
         // Mock RAG
         DTOs.RAGResponse ragResp = new DTOs.RAGResponse();
-        ragResp.setRelevantSnippets(List.of());
+        ragResp.setRelevantSources(List.of());
 
         when(responseSpec.bodyToMono(DTOs.RAGResponse.class))
                 .thenReturn(Mono.just(ragResp));

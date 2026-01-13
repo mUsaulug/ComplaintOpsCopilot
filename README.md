@@ -45,24 +45,43 @@ ComplaintOps Copilot, bankacılık sektöründe müşteri şikayetlerini otomati
 - Java 17+
 - Python 3.10+
 - PostgreSQL (veya H2 test için)
+- Node.js 18+ (frontend için)
 
-### 1. Python AI Service
+### Seçenek A: Docker ile (Önerilen)
+
+```bash
+# Tüm servisleri başlat
+docker compose up -d
+
+# Frontend dahil başlat
+docker compose --profile with-frontend up -d
+
+# Logları görüntüle
+docker compose logs -f
+
+# Smoke test
+curl http://localhost:8080/api/complaints
+```
+
+### Seçenek B: Manuel Kurulum
+
+#### 1. Python AI Service
 
 ```bash
 cd backend-python
 pip install -r requirements.txt
 
 # ChromaDB için SOP'ları yükle
-python ingest_sops.py
+python -m app.rag.ingest
 
 # Triage modelini eğit (opsiyonel, model repo'da mevcut)
-python train_triage_model.py
+python -m app.ml.train
 
 # Servisi başlat
-uvicorn main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8000
 ```
 
-### 2. Java Backend
+#### 2. Java Backend
 
 ```bash
 cd backend-java
@@ -71,7 +90,15 @@ cd backend-java
 mvn spring-boot:run
 ```
 
-### 3. Test Et
+#### 3. Frontend (Opsiyonel)
+
+```bash
+cd frontend-react
+npm install
+npm run dev
+```
+
+### 4. Test Et
 
 ```bash
 # Türkçe API endpoint
@@ -134,6 +161,7 @@ Get complaint by ID.
 | **Log Sanitization** | Sadece `masked_text_length` loglanır |
 | **Prompt Injection Guard** | `<system>`, ` ``` ` tag'leri temizlenir |
 | **PII Leak Detection** | LLM çıktısı tekrar PII taramasından geçer |
+| **WebClient Timeouts** | 10s masking, 30s AI çağrıları için timeout |
 
 ---
 
@@ -147,6 +175,10 @@ mvn test
 # Python testleri
 cd backend-python
 pytest test_kvkk_compliance.py -v
+
+# Frontend build
+cd frontend-react
+npm run build
 ```
 
 ### Test Coverage
@@ -164,25 +196,38 @@ ComplaintOpsCopilot/
 ├── backend-java/
 │   ├── src/main/java/com/complaintops/backend/
 │   │   ├── ComplaintController.java   # REST API
-│   │   ├── OrchestratorService.java   # İş akışı
+│   │   ├── OrchestratorService.java   # İş akışı + timeouts
 │   │   ├── Complaint.java             # Entity (no raw text)
 │   │   └── DTOs.java                  # API kontratları
+│   ├── Dockerfile                     # Multi-stage build
 │   └── src/test/java/                 # KVKK testleri
 │
 ├── backend-python/
-│   ├── main.py                        # FastAPI endpoints
-│   ├── pii_masker.py                  # Presidio PII maskeleme
-│   ├── triage_model.py                # ML kategorizasyon
-│   ├── rag_manager.py                 # ChromaDB RAG
-│   ├── llm_client.py                  # OpenAI entegrasyonu
-│   └── review_store.py                # Human review audit
+│   ├── app/
+│   │   ├── main.py                    # FastAPI endpoints
+│   │   ├── api/routes.py              # Route handlers
+│   │   ├── schemas.py                 # Pydantic models
+│   │   ├── services/
+│   │   │   ├── masking_service.py     # Presidio PII maskeleme
+│   │   │   ├── triage_service.py      # ML kategorizasyon
+│   │   │   ├── rag_service.py         # ChromaDB RAG
+│   │   │   ├── llm_service.py         # LLM orchestration
+│   │   │   ├── review_service.py      # Human review audit
+│   │   │   └── llm_providers/         # OpenAI/Gemini providers
+│   │   ├── ml/                        # ML training scripts
+│   │   └── rag/                       # RAG ingest scripts
+│   ├── Dockerfile                     # Python service
+│   └── test_kvkk_compliance.py        # KVKK testleri
+│
+├── frontend-react/
+│   ├── App.tsx                        # Ana uygulama
+│   ├── components/                    # UI bileşenleri
+│   └── services/backendService.ts     # Backend API client
+│
+├── docker-compose.yml                 # Full stack deployment
 │
 └── docs/
-    ├── architecture.md                # Mimari detayları
     ├── postman_collection.json        # Demo collection
-    ├── MVP_INCELEME_RAPORU_v2.md      # Ürün inceleme raporu
-    ├── API_SCHEMA_TR_v2.md            # Türkçe API şeması
-    ├── FAILURE_MODES.md               # Hata senaryoları
     └── evidence/                       # Test kanıtları
 ```
 
@@ -197,8 +242,7 @@ ComplaintOpsCopilot/
 | **LLM API çöker** | Template yanıt döner |
 | **Triage hatası** | Varsayılan: `MANUEL_INCELEME`, `YUKSEK` öncelik |
 | **Düşük güven skoru** | `insan_incelemesi_gerekli: true`, review kaydı oluşur |
-
-> Detaylı bilgi için: [docs/FAILURE_MODES.md](docs/FAILURE_MODES.md)
+| **WebClient timeout** | 10s (mask) / 30s (AI) sonra graceful degradation |
 
 ---
 

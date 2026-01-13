@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.UUID;
+import java.time.Duration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Objects;
 import org.slf4j.Logger;
@@ -19,6 +20,8 @@ import org.slf4j.LoggerFactory;
 public class OrchestratorService {
 
     private static final Logger logger = LoggerFactory.getLogger(OrchestratorService.class);
+    private static final Duration MASK_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration AI_TIMEOUT = Duration.ofSeconds(30);
 
     private final ComplaintRepository repository;
     private final WebClient.Builder webClientBuilder;
@@ -45,7 +48,7 @@ public class OrchestratorService {
                     .bodyValue(new DTOs.MaskingRequest(rawText))
                     .retrieve()
                     .bodyToMono(DTOs.MaskingResponse.class)
-                    .block();
+                    .block(MASK_TIMEOUT);
         } catch (Exception e) {
             // FAIL-CLOSED: Pipeline stops, create failed record without raw text
             logger.error("MASKING_FAILED: PII masking service unavailable. Raw text protected.");
@@ -86,7 +89,7 @@ public class OrchestratorService {
                     .bodyValue(new DTOs.TriageRequest(safeText))
                     .retrieve()
                     .bodyToMono(DTOs.TriageResponseFull.class)
-                    .block();
+                    .block(AI_TIMEOUT);
         } catch (Exception e) {
             logger.warn("Triage failed, using defaults: {}", e.getMessage());
             triageResp = new DTOs.TriageResponseFull();
@@ -105,11 +108,11 @@ public class OrchestratorService {
                     .bodyValue(new DTOs.RAGRequest(safeText))
                     .retrieve()
                     .bodyToMono(DTOs.RAGResponse.class)
-                    .block();
+                    .block(AI_TIMEOUT);
         } catch (Exception e) {
             logger.warn("RAG failed: {}", e.getMessage());
             ragResp = new DTOs.RAGResponse();
-            ragResp.setRelevantSnippets(new ArrayList<>());
+            ragResp.setRelevantSources(new ArrayList<>());
             ragStatus = "UNAVAILABLE";
         }
 
@@ -124,10 +127,10 @@ public class OrchestratorService {
                             safeText,
                             triageResp.getCategory(),
                             triageResp.getUrgency(),
-                            ragResp.getRelevantSnippets()))
+                            ragResp.getRelevantSources()))
                     .retrieve()
                     .bodyToMono(DTOs.GenerateResponse.class)
-                    .block();
+                    .block(AI_TIMEOUT);
         } catch (Exception e) {
             logger.warn("Generation failed: {}", e.getMessage());
             genResp = new DTOs.GenerateResponse();

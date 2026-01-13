@@ -13,7 +13,7 @@ class TestPIIMasking:
     
     def test_mask_endpoint_returns_masked_text(self):
         """Verify /mask endpoint masks PII correctly"""
-        from main import app
+        from app.main import app
         client = TestClient(app)
         
         # Text with Turkish PII
@@ -33,7 +33,7 @@ class TestPIIMasking:
 
     def test_mask_empty_text_handles_gracefully(self):
         """Empty or whitespace text should be handled"""
-        from main import app
+        from app.main import app
         client = TestClient(app)
         
         response = client.post("/mask", json={"text": ""})
@@ -48,7 +48,7 @@ class TestPIIMasking:
         
         try:
             # Need to reimport to pick up env change
-            from main import app
+            from app.main import app
             client = TestClient(app)
             
             response = client.post("/mask", json={
@@ -67,7 +67,7 @@ class TestLogSanitization:
     
     def test_log_sanitized_request_does_not_log_raw(self):
         """Log function receives masked text, not raw"""
-        from main import log_sanitized_request
+        from app.api.routes import log_sanitized_request
         
         # This function should only receive masked_text, not raw
         # Verify it doesn't crash and logs properly
@@ -102,7 +102,7 @@ class TestNoRawTextStorage:
     
     def test_review_store_only_stores_masked_text(self):
         """review_store should only receive masked_text"""
-        from review_store import review_store
+        from app.services.review_service import review_store
         
         # Create a review with masked text
         review_id = "test-review-123"
@@ -127,7 +127,7 @@ class TestGenerateEndpoint:
     
     def test_generate_uses_masked_input(self):
         """Generate endpoint should only process masked text"""
-        from main import app
+        from app.main import app
         client = TestClient(app)
         
         # Send already-masked text (as Java would after /mask call)

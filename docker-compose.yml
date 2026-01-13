@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # ============== DATABASE ==============
   db:
     image: postgres:15-alpine
     container_name: complaintops-db
@@ -14,10 +15,78 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
       timeout: 5s
       retries: 5
 
+  # ============== PYTHON AI SERVICE ==============
+  python-ai:
+    build:
+      context: ./backend-python
+      dockerfile: Dockerfile
+    container_name: complaintops-python
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - RAG_TOP_K=${RAG_TOP_K:-3}
+      - REVIEW_DB_PATH=/app/data/reviews.db
+    volumes:
+      - ./backend-python/data:/app/data
+      - ./backend-python/models:/app/models
+      - chroma_data:/app/chroma_db
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ============== JAVA BACKEND ==============
+  java-backend:
+    build:
+      context: ./backend-java
+      dockerfile: Dockerfile
+    container_name: complaintops-java
+    ports:
+      - "8080:8080"
+    environment:
+      - AI_SERVICE_URL=http://python-ai:8000
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/complaintops
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    depends_on:
+      db:
+        condition: service_healthy
+      python-ai:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/api/complaints" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ============== FRONTEND (Optional) ==============
+  frontend:
+    build:
+      context: ./frontend-react
+      dockerfile: Dockerfile
+    container_name: complaintops-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_BACKEND_URL=http://localhost:8080
+    depends_on:
+      - java-backend
+    restart: unless-stopped
+    profiles:
+      - with-frontend
+
 volumes:
   postgres_data:
+  chroma_data:
