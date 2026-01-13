@@ -93,7 +93,7 @@ class KvkkComplianceTest {
         // Assert: FAIL-CLOSED behavior
         assertNotNull(result);
         assertEquals(ComplaintStatus.MASKING_FAILED, result.getStatus());
-        assertEquals("MANUAL_REVIEW", result.getCategory());
+        assertEquals("UNKNOWN", result.getCategory());
         assertEquals("HIGH", result.getUrgency());
 
         // CRITICAL: Raw text must NOT be in the result

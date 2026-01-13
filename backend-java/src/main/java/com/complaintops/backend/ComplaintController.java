@@ -204,7 +204,7 @@ public class ComplaintController {
             case "CARD_LIMIT_CREDIT" -> "KART_LIMIT_KREDI";
             case "INFORMATION_REQUEST" -> "BILGI_TALEBI";
             case "CAMPAIGN_POINTS_REWARDS" -> "KAMPANYA_PUAN_ODUL";
-            case "MANUAL_REVIEW" -> "MANUEL_INCELEME";
+            case "UNKNOWN" -> "BILINMIYOR";
             default -> category;
         };
     }

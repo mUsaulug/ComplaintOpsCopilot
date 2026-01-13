@@ -59,7 +59,7 @@ class SikayetSchemaTest {
         // Arrange
         Complaint failedComplaint = new Complaint();
         failedComplaint.setId(2L);
-        failedComplaint.setCategory("MANUAL_REVIEW");
+        failedComplaint.setCategory("UNKNOWN");
         failedComplaint.setUrgency("HIGH");
         failedComplaint.setCustomerReplyDraft("Şikayetiniz manuel inceleme için yönlendirildi.");
         failedComplaint.setMaskedText("[MASKING_ERROR]");
@@ -72,7 +72,7 @@ class SikayetSchemaTest {
                 .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
                 .content("{\"metin\": \"Test şikayeti\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.kategori").value("MANUEL_INCELEME"))
+                .andExpect(jsonPath("$.kategori").value("BILINMIYOR"))
                 .andExpect(jsonPath("$.oncelik").value("YUKSEK"))
                 .andExpect(jsonPath("$.durum").value("MASKELEME_HATASI"));
     }

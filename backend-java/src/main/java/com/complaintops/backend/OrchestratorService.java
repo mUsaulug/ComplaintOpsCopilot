@@ -60,8 +60,11 @@ public class OrchestratorService {
 
             Complaint failedComplaint = new Complaint();
             failedComplaint.setMaskedText("[MASKING_ERROR - İçerik korumalı]");
-            failedComplaint.setCategory("MANUAL_REVIEW");
+            failedComplaint.setCategory("UNKNOWN");
             failedComplaint.setUrgency("HIGH");
+            failedComplaint.setTriageStatus("FAILED");
+            failedComplaint.setRiskLevel("HIGH");
+            failedComplaint.setNeedsHumanReview(true);
             failedComplaint.setActionPlan("[\"Manuel inceleme gerekli: Maskeleme servisi hatası\"]");
             failedComplaint.setCustomerReplyDraft("Şikayetiniz alındı. Manuel inceleme için yönlendirildi.");
             failedComplaint.setStatus(ComplaintStatus.MASKING_FAILED);
@@ -74,8 +77,11 @@ public class OrchestratorService {
 
             Complaint failedComplaint = new Complaint();
             failedComplaint.setMaskedText("[MASKING_ERROR - İçerik korumalı]");
-            failedComplaint.setCategory("MANUAL_REVIEW");
+            failedComplaint.setCategory("UNKNOWN");
             failedComplaint.setUrgency("HIGH");
+            failedComplaint.setTriageStatus("FAILED");
+            failedComplaint.setRiskLevel("HIGH");
+            failedComplaint.setNeedsHumanReview(true);
             failedComplaint.setActionPlan("[\"Manuel inceleme gerekli: Boş maskeleme yanıtı\"]");
             failedComplaint.setCustomerReplyDraft("Şikayetiniz alındı. Manuel inceleme için yönlendirildi.");
             failedComplaint.setStatus(ComplaintStatus.MASKING_FAILED);
@@ -99,9 +105,10 @@ public class OrchestratorService {
         } catch (Exception e) {
             logger.warn("Triage failed, using defaults: {}", e.getMessage());
             triageResp = new DTOs.TriageResponseFull();
-            triageResp.setCategory("MANUAL_REVIEW");
+            triageResp.setCategory("UNKNOWN");
             triageResp.setUrgency("MEDIUM");
             triageResp.setNeedsHumanReview(true);
+            triageResp.setTriageStatus("FAILED");
         }
 
         // 3. RAG Retrieval
@@ -196,11 +203,10 @@ public class OrchestratorService {
         return Retry.backoff(2, RETRY_BACKOFF)
                 .filter(this::isRetryable)
                 .onRetryExhaustedThrow((spec, signal) -> signal.failure())
-                .doBeforeRetry(retrySignal ->
-                        logger.warn("Retrying stage={} attempt={} due_to={}",
-                                stage,
-                                retrySignal.totalRetries() + 1,
-                                retrySignal.failure() != null ? retrySignal.failure().getMessage() : "unknown"));
+                .doBeforeRetry(retrySignal -> logger.warn("Retrying stage={} attempt={} due_to={}",
+                        stage,
+                        retrySignal.totalRetries() + 1,
+                        retrySignal.failure() != null ? retrySignal.failure().getMessage() : "unknown"));
     }
 
     private boolean isRetryable(Throwable throwable) {

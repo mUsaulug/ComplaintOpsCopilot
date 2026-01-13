@@ -8,6 +8,7 @@ CATEGORY_VALUES = [
     "CARD_LIMIT_CREDIT",
     "INFORMATION_REQUEST",
     "CAMPAIGN_POINTS_REWARDS",
+    "UNKNOWN",
 ]
 
 CategoryLiteral = Literal[
@@ -18,4 +19,8 @@ CategoryLiteral = Literal[
     "CARD_LIMIT_CREDIT",
     "INFORMATION_REQUEST",
     "CAMPAIGN_POINTS_REWARDS",
+    "UNKNOWN",
 ]
+
+TriageStatus = Literal["OK", "FAILED", "FALLBACK"]
+RiskLevel = Literal["LOW", "MEDIUM", "HIGH"]

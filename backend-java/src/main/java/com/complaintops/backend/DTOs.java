@@ -52,7 +52,6 @@ public class DTOs {
     @NoArgsConstructor
     public static class RAGRequest {
         private String text;
-
         private String category;
     }
 
@@ -90,6 +89,25 @@ public class DTOs {
 
         @JsonProperty("error_code")
         private String errorCode;
+
+        // Risk assessment fields
+        @JsonProperty("risk_level")
+        private String riskLevel;
+
+        @JsonProperty("risk_reasons")
+        private List<String> riskReasons;
+
+        @JsonProperty("needs_human_review")
+        private boolean needsHumanReview;
+
+        @JsonProperty("confidence")
+        private double confidence;
+
+        @JsonProperty("policy_alignment")
+        private double policyAlignment;
+
+        @JsonProperty("triage_status")
+        private String triageStatus;
     }
 
     @Data
@@ -129,5 +147,8 @@ public class DTOs {
 
         @JsonProperty("model_loaded")
         private boolean modelLoaded;
+
+        @JsonProperty("triage_status")
+        private String triageStatus;
     }
 }

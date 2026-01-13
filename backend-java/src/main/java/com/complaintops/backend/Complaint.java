@@ -46,6 +46,10 @@ public class Complaint {
     private String ragStatus = "OK"; // OK, UNAVAILABLE, ERROR
     private String llmStatus = "OK"; // OK, TEMPLATE_FALLBACK, ERROR
 
+    // Risk assessment fields
+    private String riskLevel = "MEDIUM"; // LOW, MEDIUM, HIGH
+    private String triageStatus = "OK"; // OK, FAILED, FALLBACK
+
     @Enumerated(EnumType.STRING)
     private ComplaintStatus status = ComplaintStatus.NEW;
 

@@ -1,7 +1,8 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Literal
 
-# Common Types
+# === Type Definitions ===
+
 CategoryLiteral = Literal[
     "FRAUD_UNAUTHORIZED_TX",
     "CHARGEBACK_DISPUTE",
@@ -10,7 +11,11 @@ CategoryLiteral = Literal[
     "CARD_LIMIT_CREDIT",
     "INFORMATION_REQUEST",
     "CAMPAIGN_POINTS_REWARDS",
+    "UNKNOWN",  # Fallback for failed triage
 ]
+
+TriageStatus = Literal["OK", "FAILED", "FALLBACK"]
+RiskLevel = Literal["LOW", "MEDIUM", "HIGH"]
 
 # --- Shared Models ---
 
@@ -43,6 +48,7 @@ class TriageResponse(BaseModel):
     model_loaded: bool
     review_status: str
     review_id: Optional[str] = None
+    triage_status: TriageStatus = "OK"
 
 class RAGRequest(BaseModel):
     text: str
@@ -58,11 +64,19 @@ class GenerateRequest(BaseModel):
     relevant_sources: List[SourceItem] = Field(default_factory=list)
 
 class GenerateResponse(BaseModel):
+    """Extended response with risk assessment fields."""
     action_plan: List[str]
     customer_reply_draft: str
     risk_flags: List[str]
     sources: List[SourceItem]
     error_code: Optional[str] = None
+    # Risk assessment fields
+    risk_level: RiskLevel = "MEDIUM"
+    risk_reasons: List[str] = Field(default_factory=list)
+    needs_human_review: bool = False
+    confidence: float = 0.0
+    policy_alignment: float = 0.0
+    triage_status: TriageStatus = "OK"
 
 class ReviewActionRequest(BaseModel):
     review_id: str
