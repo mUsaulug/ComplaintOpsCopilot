@@ -5,6 +5,7 @@ import re
 from typing import Optional
 from app.schemas import LLMResponse
 from app.services.llm_providers.base import AbstractLLMProvider
+from app.services.pii_scan import scan_text
 from app.core.constants import CATEGORY_VALUES
 from app.core.logging import get_logger
 
@@ -98,9 +99,7 @@ class OpenAIProvider(AbstractLLMProvider):
     def _detect_pii(self, text: str) -> bool:
         """Detect if text contains PII using the masking service."""
         try:
-            from app.services.masking_service import masker
-            result = masker.mask(text)
-            return result["masked_text"] != text
+            return scan_text(text).contains_pii
         except Exception:
             logger.warning("PII detection failed, assuming no PII")
             return False

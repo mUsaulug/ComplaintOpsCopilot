@@ -50,11 +50,8 @@ ComplaintOps Copilot, bankacılık sektöründe müşteri şikayetlerini otomati
 ### Seçenek A: Docker ile (Önerilen)
 
 ```bash
-# Tüm servisleri başlat
+# Tüm servisleri başlat (frontend dahil)
 docker compose up -d
-
-# Frontend dahil başlat
-docker compose --profile with-frontend up -d
 
 # Logları görüntüle
 docker compose logs -f
@@ -111,6 +108,110 @@ curl -X POST http://localhost:8080/api/sikayet \
 
 ## 📡 API Referansı
 
+### POST /mask (Python)
+
+**Request:**
+```json
+{
+  "text": "Müşteri no 1234567890, email test@example.com"
+}
+```
+
+**Response:**
+```json
+{
+  "masked_text": "Müşteri no [MASKED_ACCOUNT], email [MASKED_EMAIL]",
+  "masked_entities": ["ACCOUNT_NUMBER", "EMAIL_ADDRESS"]
+}
+```
+
+### POST /predict (Python)
+
+**Request:**
+```json
+{
+  "text": "Kartımdan bilgim dışında 500 TL çekildi."
+}
+```
+
+**Response:**
+```json
+{
+  "category": "FRAUD_UNAUTHORIZED_TX",
+  "category_confidence": 0.82,
+  "urgency": "HIGH",
+  "urgency_confidence": 0.76,
+  "needs_human_review": false,
+  "model_loaded": true,
+  "review_status": "AUTO_APPROVED",
+  "review_id": null
+}
+```
+
+### POST /retrieve (Python)
+
+**Request:**
+```json
+{
+  "text": "Kart aidatı iadesi",
+  "category": "INFORMATION_REQUEST"
+}
+```
+
+**Response:**
+```json
+{
+  "relevant_sources": [
+    {
+      "doc_name": "sop_3",
+      "source": "Bank_SOP_v1",
+      "snippet": "Aidat iadesi için müşteri talebini kaydedin...",
+      "chunk_id": "sop_3:12"
+    }
+  ]
+}
+```
+
+### POST /generate (Python)
+
+**Request:**
+```json
+{
+  "text": "Kartımdan bilgim dışında 500 TL çekildi.",
+  "category": "FRAUD_UNAUTHORIZED_TX",
+  "urgency": "HIGH",
+  "relevant_sources": [
+    {
+      "doc_name": "sop_3",
+      "source": "Bank_SOP_v1",
+      "snippet": "Fraud şüphesi durumunda kartı hemen bloke edin...",
+      "chunk_id": "sop_3:12"
+    }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "action_plan": [
+    "Kartı güvenlik nedeniyle bloke edin.",
+    "Müşteriye iade sürecini başlatın."
+  ],
+  "customer_reply_draft": "Sayın müşterimiz, kartınız güvenlik nedeniyle bloke edilmiştir...",
+  "risk_flags": ["FRAUD_CASE"],
+  "sources": [
+    {
+      "doc_name": "sop_3",
+      "source": "Bank_SOP_v1",
+      "snippet": "Fraud şüphesi durumunda kartı hemen bloke edin...",
+      "chunk_id": "sop_3:12"
+    }
+  ],
+  "error_code": null
+}
+```
+
 ### POST /api/sikayet (Türkçe)
 
 **Request:**
@@ -160,7 +261,7 @@ Get complaint by ID.
 | **Fail-Closed PII** | Maskeleme hatası → `MASKING_FAILED` status |
 | **Log Sanitization** | Sadece `masked_text_length` loglanır |
 | **Prompt Injection Guard** | `<system>`, ` ``` ` tag'leri temizlenir |
-| **PII Leak Detection** | LLM çıktısı tekrar PII taramasından geçer |
+| **PII Leak Detection** | LLM çıktısı tekrar PII taramasından geçer, tespit edilirse bloklanır |
 | **WebClient Timeouts** | 10s masking, 30s AI çağrıları için timeout |
 
 ---
@@ -230,6 +331,16 @@ ComplaintOpsCopilot/
     ├── postman_collection.json        # Demo collection
     └── evidence/                       # Test kanıtları
 ```
+
+---
+
+## 🎬 Demo Senaryosu (2 Dakika)
+
+1. Frontend’i açın: `http://localhost:3000`
+2. Örnek şikayet girin ve **Analizi Başlat**’a tıklayın.
+3. Pipeline kartlarında Maskeleme → Triage → RAG → LLM → İnceleme durumlarını izleyin.
+4. Kanıt kartlarından SOP özetlerini kontrol edin.
+5. “İncele & Gönder” ile insan onayını simüle edin.
 
 ---
 

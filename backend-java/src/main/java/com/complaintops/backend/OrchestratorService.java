@@ -14,6 +14,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.util.retry.Retry;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +25,7 @@ public class OrchestratorService {
     private static final Logger logger = LoggerFactory.getLogger(OrchestratorService.class);
     private static final Duration MASK_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration AI_TIMEOUT = Duration.ofSeconds(30);
+    private static final Duration RETRY_BACKOFF = Duration.ofMillis(300);
 
     private final ComplaintRepository repository;
     private final WebClient.Builder webClientBuilder;
@@ -48,6 +52,7 @@ public class OrchestratorService {
                     .bodyValue(new DTOs.MaskingRequest(rawText))
                     .retrieve()
                     .bodyToMono(DTOs.MaskingResponse.class)
+                    .retryWhen(buildRetrySpec("masking"))
                     .block(MASK_TIMEOUT);
         } catch (Exception e) {
             // FAIL-CLOSED: Pipeline stops, create failed record without raw text
@@ -89,6 +94,7 @@ public class OrchestratorService {
                     .bodyValue(new DTOs.TriageRequest(safeText))
                     .retrieve()
                     .bodyToMono(DTOs.TriageResponseFull.class)
+                    .retryWhen(buildRetrySpec("triage"))
                     .block(AI_TIMEOUT);
         } catch (Exception e) {
             logger.warn("Triage failed, using defaults: {}", e.getMessage());
@@ -105,9 +111,10 @@ public class OrchestratorService {
             ragResp = webClient.post()
                     .uri("/retrieve")
                     .header("X-Request-ID", requestId)
-                    .bodyValue(new DTOs.RAGRequest(safeText))
+                    .bodyValue(new DTOs.RAGRequest(safeText, triageResp.getCategory()))
                     .retrieve()
                     .bodyToMono(DTOs.RAGResponse.class)
+                    .retryWhen(buildRetrySpec("rag"))
                     .block(AI_TIMEOUT);
         } catch (Exception e) {
             logger.warn("RAG failed: {}", e.getMessage());
@@ -130,6 +137,7 @@ public class OrchestratorService {
                             ragResp.getRelevantSources()))
                     .retrieve()
                     .bodyToMono(DTOs.GenerateResponse.class)
+                    .retryWhen(buildRetrySpec("generate"))
                     .block(AI_TIMEOUT);
         } catch (Exception e) {
             logger.warn("Generation failed: {}", e.getMessage());
@@ -182,6 +190,27 @@ public class OrchestratorService {
                 ragStatus, llmStatus);
 
         return repository.save(complaint);
+    }
+
+    private Retry buildRetrySpec(String stage) {
+        return Retry.backoff(2, RETRY_BACKOFF)
+                .filter(this::isRetryable)
+                .onRetryExhaustedThrow((spec, signal) -> signal.failure())
+                .doBeforeRetry(retrySignal ->
+                        logger.warn("Retrying stage={} attempt={} due_to={}",
+                                stage,
+                                retrySignal.totalRetries() + 1,
+                                retrySignal.failure() != null ? retrySignal.failure().getMessage() : "unknown"));
+    }
+
+    private boolean isRetryable(Throwable throwable) {
+        if (throwable instanceof WebClientRequestException) {
+            return true;
+        }
+        if (throwable instanceof WebClientResponseException responseException) {
+            return responseException.getStatusCode().is5xxServerError();
+        }
+        return false;
     }
 
     public List<Complaint> getAllComplaints() {

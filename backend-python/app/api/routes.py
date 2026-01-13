@@ -17,6 +17,7 @@ from app.services.review_service import review_store
 from app.services.rag_service import rag_manager
 from app.services.llm_service import llm_client
 from app.services.similarity_service import similarity_service
+from app.services.pii_scan import scan_texts
 
 router = APIRouter()
 logger = get_logger("complaintops.api")
@@ -151,6 +152,32 @@ def generate_response(payload: GenerateRequest, request: Request):
         urgency=payload.urgency,
         snippets=snippets
     )
+
+    output_scan = scan_texts([
+        " ".join(result.get("action_plan", [])),
+        result.get("customer_reply_draft", "")
+    ])
+
+    if output_scan.contains_pii:
+        logger.error(
+            "PII_LEAK_BLOCKED request_id=%s entity_types=%s",
+            request.state.request_id,
+            ",".join(sorted(set(output_scan.entity_types))),
+        )
+        return GenerateResponse(
+            action_plan=[
+                "LLM çıktısında PII tespit edildi.",
+                "Yanıt manuel incelemeye yönlendirildi."
+            ],
+            customer_reply_draft=(
+                "Şikayetiniz güvenlik incelemesi için yönlendirilmiştir. "
+                "En kısa sürede sizinle iletişime geçilecektir."
+            ),
+            risk_flags=list(dict.fromkeys(result.get("risk_flags", []) + ["PII_LEAK_BLOCKED"])),
+            sources=[],
+            error_code="PII_BLOCKED",
+        )
+
     return GenerateResponse(
         action_plan=result["action_plan"],
         customer_reply_draft=result["customer_reply_draft"],

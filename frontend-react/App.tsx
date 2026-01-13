@@ -1,11 +1,12 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import Header from './components/Header';
 import SmartComplaintViewer from './components/SmartComplaintViewer';
 import AIInsightCard from './components/AIInsightCard';
 import ResponseEditor from './components/ResponseEditor';
 import ActionBar from './components/ActionBar';
-import ChatBot from './components/ChatBot';
+import ComplaintInputCard from './components/ComplaintInputCard';
+import PipelineStatus from './components/PipelineStatus';
 import { Toaster, toast } from 'sonner';
 import { ComplaintData, CustomerSegment, ComplaintState, Priority } from './types';
 import { submitComplaint, findSimilarComplaints, approveComplaint, rejectComplaint } from './services/backendService';
@@ -32,17 +33,18 @@ const App: React.FC = () => {
   });
 
   const [draftResponse, setDraftResponse] = useState('');
+  const [complaintDraft, setComplaintDraft] = useState('');
 
   const runAnalysis = useCallback(async () => {
+    if (complaintDraft.trim().length < 20) {
+      setState(prev => ({ ...prev, error: 'En az 20 karakterlik bir şikayet girin.' }));
+      return;
+    }
+
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      // 1. Backend'e gönder
-      // NOTE: In real app, we might get text from a secure input or previous step. 
-      // For demo, we are using a hardcoded text if maskedText is initial.
-      const textToSubmit = "Kredi kartımdan Apple Store harcaması çekilmiş, ben yapmadım! İade istiyorum hemen!";
-
-      const backendResult = await submitComplaint(textToSubmit);
+      const backendResult = await submitComplaint(complaintDraft.trim());
 
       // 2. Backend response'u frontend format'ına çevir
       const { analysis, suggestion } = adaptBackendResponse(backendResult);
@@ -93,11 +95,7 @@ const App: React.FC = () => {
       }));
       toast.error("Bağlantı hatası oluştu.");
     }
-  }, [state.complaint.maskedText]);
-
-  useEffect(() => {
-    runAnalysis();
-  }, [runAnalysis]);
+  }, [complaintDraft]);
 
   const handleApprove = async () => {
     if (!state.complaint.backendId) return;
@@ -131,6 +129,13 @@ const App: React.FC = () => {
 
       <main className="flex flex-1 overflow-hidden relative">
         <section className="w-[40%] border-r border-slate-200 bg-zinc-50 flex flex-col relative z-0">
+          <ComplaintInputCard
+            value={complaintDraft}
+            onChange={setComplaintDraft}
+            onSubmit={runAnalysis}
+            isSubmitting={state.isLoading}
+            error={state.error}
+          />
           <SmartComplaintViewer data={state.complaint} />
         </section>
 
@@ -146,6 +151,45 @@ const App: React.FC = () => {
               suggestion={state.suggestion}
               onTextChange={setDraftResponse}
             />
+
+            {state.complaint.sistemDurumu && (
+              <PipelineStatus
+                stages={[
+                  {
+                    id: 'masking',
+                    label: 'Maskeleme',
+                    state: state.complaint.maskedText.includes('MASKING_ERROR') ? 'failed' : 'ok',
+                    detail: state.complaint.maskedText.includes('MASKING_ERROR')
+                      ? 'Maskeleme hatası'
+                      : 'PII koruması uygulandı',
+                  },
+                  {
+                    id: 'triage',
+                    label: 'Triage',
+                    state: state.analysis ? 'ok' : 'pending',
+                    detail: state.analysis ? 'Kategori & öncelik belirlendi' : 'Bekleniyor',
+                  },
+                  {
+                    id: 'rag',
+                    label: 'RAG',
+                    state: state.complaint.sistemDurumu.rag_durumu === 'UNAVAILABLE' ? 'warning' : 'ok',
+                    detail: `Durum: ${state.complaint.sistemDurumu.rag_durumu}`,
+                  },
+                  {
+                    id: 'llm',
+                    label: 'LLM',
+                    state: state.complaint.sistemDurumu.llm_durumu === 'TEMPLATE_FALLBACK' ? 'warning' : 'ok',
+                    detail: `Durum: ${state.complaint.sistemDurumu.llm_durumu}`,
+                  },
+                  {
+                    id: 'review',
+                    label: 'İnceleme',
+                    state: state.complaint.insanIncelemesiGerekli ? 'warning' : 'ok',
+                    detail: state.complaint.insanIncelemesiGerekli ? 'İnsan kontrolü gerekli' : 'Otomatik uygun',
+                  },
+                ]}
+              />
+            )}
 
             {state.similarComplaints && state.similarComplaints.length > 0 && (
               <div className="mt-8 animate-fade-in">
@@ -173,8 +217,6 @@ const App: React.FC = () => {
           />
         </section>
       </main>
-
-      <ChatBot />
 
       {state.isSubmitting && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-[100] flex items-center justify-center">

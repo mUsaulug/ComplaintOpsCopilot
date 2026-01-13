@@ -76,16 +76,14 @@ services:
     build:
       context: ./frontend-react
       dockerfile: Dockerfile
+      args:
+        VITE_BACKEND_URL: http://localhost:8080
     container_name: complaintops-frontend
     ports:
       - "3000:80"
-    environment:
-      - VITE_BACKEND_URL=http://localhost:8080
     depends_on:
       - java-backend
     restart: unless-stopped
-    profiles:
-      - with-frontend
 
 volumes:
   postgres_data:

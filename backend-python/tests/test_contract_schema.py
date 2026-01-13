@@ -84,7 +84,6 @@ def test_contract_review_endpoints():
     # We want to check the *Success* contract.
     # Let's mock review_store to return a dummy record
     from unittest.mock import patch, MagicMock
-    from review_store import ReviewRecord
     
     mock_record = ReviewRecord(
         review_id="test-id",
