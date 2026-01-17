@@ -59,9 +59,9 @@ class GeminiProvider(AbstractLLMProvider):
         """Detect if text contains PII using the masking service."""
         try:
             return scan_text(text).contains_pii
-        except Exception:
-            logger.warning("PII detection failed, assuming no PII")
-            return False
+        except Exception as exc:
+            logger.error("PII detection failed, blocking output error=%s", exc)
+            return True
 
     def generate_response(self, text: str, category: str, urgency: str, snippets: list) -> dict:
         if not self.model:
