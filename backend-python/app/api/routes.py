@@ -17,14 +17,22 @@ from app.services.review_service import review_store
 from app.services.rag_service import rag_manager
 from app.services.llm_service import llm_client
 from app.services.similarity_service import similarity_service
-from app.services.pii_scan import scan_texts
+from app.services.pii_scan import scan_text, scan_texts
 
 router = APIRouter()
 logger = get_logger("complaintops.api")
 
-def sanitize_input(text: str) -> dict:
+def sanitize_input(text: str, request_id: str) -> dict:
     """Sanitize input using double-pass PII masking for 0% leak rate."""
-    masked_text, presidio_entities, regex_entities = masker.mask_with_double_pass(text)
+    try:
+        masked_text, presidio_entities, regex_entities = masker.mask_with_double_pass(text)
+    except Exception as exc:
+        logger.error(
+            "masking_failed request_id=%s error=%s",
+            request_id,
+            exc,
+        )
+        raise HTTPException(status_code=503, detail="MASKING_FAILED") from exc
     all_entities = [e["type"] for e in presidio_entities] + [e["type"] for e in regex_entities]
     return {
         "masked_text": masked_text,
@@ -47,7 +55,7 @@ def log_sanitized_request(
 
 @router.post("/mask", response_model=MaskingResponse)
 def mask_pii(payload: MaskingRequest, request: Request):
-    result = sanitize_input(payload.text)
+    result = sanitize_input(payload.text, request.state.request_id)
     log_sanitized_request(
         "/mask",
         result["masked_text"],
@@ -62,7 +70,7 @@ def mask_pii(payload: MaskingRequest, request: Request):
 
 @router.post("/predict", response_model=TriageResponse)
 def predict_triage(payload: TriageRequest, request: Request):
-    sanitized = sanitize_input(payload.text)
+    sanitized = sanitize_input(payload.text, request.state.request_id)
     log_sanitized_request(
         "/predict",
         sanitized["masked_text"],
@@ -100,7 +108,7 @@ def predict_triage(payload: TriageRequest, request: Request):
 
 @router.post("/retrieve", response_model=RAGResponse)
 def retrieve_docs(payload: RAGRequest, request: Request):
-    sanitized = sanitize_input(payload.text)
+    sanitized = sanitize_input(payload.text, request.state.request_id)
     log_sanitized_request(
         "/retrieve",
         sanitized["masked_text"],
@@ -112,7 +120,7 @@ def retrieve_docs(payload: RAGRequest, request: Request):
 
 @router.post("/generate", response_model=GenerateResponse)
 def generate_response(payload: GenerateRequest, request: Request):
-    sanitized = sanitize_input(payload.text)
+    sanitized = sanitize_input(payload.text, request.state.request_id)
     log_sanitized_request(
         "/generate",
         sanitized["masked_text"],
@@ -224,8 +232,16 @@ class SimilarComplaintsResponse(BaseModel):
     total_indexed: int
 
 @router.post("/index-complaint")
-def index_complaint(payload: IndexComplaintRequest):
+def index_complaint(payload: IndexComplaintRequest, request: Request):
     """Index a complaint for similarity search."""
+    scan_result = scan_text(payload.masked_text)
+    if scan_result.contains_pii:
+        logger.error(
+            "raw_text_rejected request_id=%s entity_types=%s",
+            request.state.request_id,
+            ",".join(sorted(set(scan_result.entity_types))),
+        )
+        raise HTTPException(status_code=400, detail="RAW_TEXT_REJECTED")
     metadata = {
         "category": payload.category or "",
         "status": payload.status or "",
@@ -244,11 +260,14 @@ def index_complaint(payload: IndexComplaintRequest):
 def find_similar_complaints(
     complaint_id: str,
     query_text: str,
-    limit: int = 5
+    limit: int = 5,
+    request: Request = None,
 ):
     """Find complaints similar to the given query text."""
+    request_id = request.state.request_id if request else "-"
+    sanitized = sanitize_input(query_text, request_id)
     results = similarity_service.find_similar(
-        query_text=query_text,
+        query_text=sanitized["masked_text"],
         n_results=limit,
         exclude_id=complaint_id
     )

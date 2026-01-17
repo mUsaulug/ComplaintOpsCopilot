@@ -18,9 +18,13 @@ def scan_text(text: str) -> PiiScanResult:
     if not text:
         return PiiScanResult(contains_pii=False, masked_text=text, entity_types=[])
 
-    masked_text, presidio_entities, regex_entities = masker.mask_with_double_pass(text)
-    entity_types = [e["type"] for e in presidio_entities] + [e["type"] for e in regex_entities]
-    contains_pii = masked_text != text
+    try:
+        masked_text, presidio_entities, regex_entities = masker.mask_with_double_pass(text)
+        entity_types = [e["type"] for e in presidio_entities] + [e["type"] for e in regex_entities]
+        contains_pii = masked_text != text
+    except Exception as exc:
+        logger.error("pii_scan_failed error=%s", exc)
+        return PiiScanResult(contains_pii=True, masked_text="", entity_types=["SCAN_ERROR"])
 
     if contains_pii:
         logger.warning("pii_detected entity_types=%s", ",".join(sorted(set(entity_types))))
