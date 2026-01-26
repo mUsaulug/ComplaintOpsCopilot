@@ -2,15 +2,15 @@
 import { AnalysisResult, Suggestion, ComplaintCategory, Priority, Sentiment, BackendComplaintResponse } from '../types';
 
 const CATEGORY_MAP: Record<string, ComplaintCategory> = {
+  // Turkish response values from Java /api/sikayet endpoint
   'DOLANDIRICILIK_YETKISIZ_ISLEM': ComplaintCategory.FRAUD_UNAUTHORIZED_TX,
   'IADE_ITIRAZ': ComplaintCategory.CHARGEBACK_DISPUTE,
   'TRANSFER_GECIKMESI': ComplaintCategory.TRANSFER_DELAY,
-  'ERISIM_GIRIS_MOBIL': ComplaintCategory.TECHNICAL,
-  'KART_LIMIT_KREDI': ComplaintCategory.CARD_ISSUE,
-  'BILGI_TALEBI': ComplaintCategory.SERVICE_ISSUE,
-  'KAMPANYA_PUAN_ODUL': ComplaintCategory.SERVICE_ISSUE,
-  'TEKNIK': ComplaintCategory.TECHNICAL,
-  'MANUEL_INCELEME': ComplaintCategory.UNKNOWN
+  'ERISIM_GIRIS_MOBIL': ComplaintCategory.ACCESS_LOGIN_MOBILE,
+  'KART_LIMIT_KREDI': ComplaintCategory.CARD_LIMIT_CREDIT,
+  'BILGI_TALEBI': ComplaintCategory.INFORMATION_REQUEST,
+  'KAMPANYA_PUAN_ODUL': ComplaintCategory.CAMPAIGN_POINTS_REWARDS,
+  'BILINMIYOR': ComplaintCategory.UNKNOWN
 };
 
 const PRIORITY_MAP: Record<string, Priority> = {

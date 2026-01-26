@@ -9,11 +9,24 @@ export enum ComplaintCategory {
   FRAUD_UNAUTHORIZED_TX = 'FRAUD_UNAUTHORIZED_TX',
   CHARGEBACK_DISPUTE = 'CHARGEBACK_DISPUTE',
   TRANSFER_DELAY = 'TRANSFER_DELAY',
-  TECHNICAL = 'TECHNICAL',
-  CARD_ISSUE = 'CARD_ISSUE',
-  SERVICE_ISSUE = 'SERVICE_ISSUE',
+  ACCESS_LOGIN_MOBILE = 'ACCESS_LOGIN_MOBILE',
+  CARD_LIMIT_CREDIT = 'CARD_LIMIT_CREDIT',
+  INFORMATION_REQUEST = 'INFORMATION_REQUEST',
+  CAMPAIGN_POINTS_REWARDS = 'CAMPAIGN_POINTS_REWARDS',
   UNKNOWN = 'UNKNOWN'
 }
+
+// UI display labels for categories (Turkish)
+export const CATEGORY_LABELS: Record<ComplaintCategory, string> = {
+  [ComplaintCategory.FRAUD_UNAUTHORIZED_TX]: 'Dolandırıcılık / Yetkisiz İşlem',
+  [ComplaintCategory.CHARGEBACK_DISPUTE]: 'İade / İtiraz',
+  [ComplaintCategory.TRANSFER_DELAY]: 'Transfer Gecikmesi',
+  [ComplaintCategory.ACCESS_LOGIN_MOBILE]: 'Erişim / Giriş / Mobil',
+  [ComplaintCategory.CARD_LIMIT_CREDIT]: 'Kart / Limit / Kredi',
+  [ComplaintCategory.INFORMATION_REQUEST]: 'Bilgi Talebi',
+  [ComplaintCategory.CAMPAIGN_POINTS_REWARDS]: 'Kampanya / Puan / Ödül',
+  [ComplaintCategory.UNKNOWN]: 'Bilinmiyor'
+};
 
 export enum Priority {
   LOW = 'LOW',

@@ -12,3 +12,5 @@ openai
 python-dotenv==1.0.0
 gunicorn==21.2.0
 google-generativeai
+cryptography>=41.0.0
+
