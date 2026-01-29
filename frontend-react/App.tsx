@@ -147,6 +147,18 @@ const App: React.FC = () => {
               needsHumanReview={state.complaint.insanIncelemesiGerekli}
             />
 
+            {!state.isLoading && !state.analysis && (
+              <div
+                className="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-8 text-center text-slate-500"
+                data-testid="analysis-empty-state"
+              >
+                <p className="text-sm font-semibold text-slate-700">Analiz bekleniyor</p>
+                <p className="text-xs mt-2">
+                  Sol panelden en az 20 karakterlik bir şikayet girip “Analizi Başlat” butonuna basın.
+                </p>
+              </div>
+            )}
+
             <ResponseEditor
               suggestion={state.suggestion}
               onTextChange={setDraftResponse}
