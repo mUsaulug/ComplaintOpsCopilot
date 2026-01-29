@@ -26,6 +26,10 @@ const ResponseEditor: React.FC<Props> = ({ suggestion, onTextChange }) => {
     // Simulated magic actions - normally would call Gemini again
     let newText = text;
     if (type === 'formal') newText = "Sayın Müşterimiz, " + text;
+    if (type === 'empathetic') {
+      const prefix = "Sizi anlıyoruz ve yaşadığınız durum için üzgünüz. ";
+      newText = text.startsWith(prefix) ? text : prefix + text;
+    }
     if (type === 'short') newText = text.substring(0, 100) + "...";
     setText(newText);
     onTextChange(newText);
