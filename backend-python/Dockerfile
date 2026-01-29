@@ -49,9 +49,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 # -w 1: Enforce single worker to prevent OOM
 # --preload: Load app in master process (saves RAM)
 # --timeout 300: Allow 5 mins for initial model loading
-CMD gunicorn app.main:app \
-    --workers 1 \
-    --worker-class uvicorn.workers.UvicornWorker \
-    --bind 0.0.0.0:8000 \
-    --timeout 300 \
-    --preload
+CMD ["gunicorn", "app.main:app", "--workers", "1", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--timeout", "300", "--preload"]
