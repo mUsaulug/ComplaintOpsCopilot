@@ -9,7 +9,7 @@ import ComplaintInputCard from './components/ComplaintInputCard';
 import PipelineStatus from './components/PipelineStatus';
 import { Toaster, toast } from 'sonner';
 import { ComplaintData, CustomerSegment, ComplaintState, Priority } from './types';
-import { submitComplaint, findSimilarComplaints, approveComplaint, rejectComplaint } from './services/backendService';
+import { submitComplaint, findSimilarComplaints, approveComplaint, rejectComplaint, editComplaintResponse } from './services/backendService';
 import { adaptBackendResponse } from './services/dataAdapter';
 
 const INITIAL_COMPLAINT: ComplaintData = {
@@ -101,7 +101,18 @@ const App: React.FC = () => {
     if (!state.complaint.backendId) return;
     setState(prev => ({ ...prev, isSubmitting: true }));
     try {
-      await approveComplaint(state.complaint.backendId, "AI destekli kontrol tamamlandı.");
+      if (state.suggestion && draftResponse.trim() !== state.suggestion.responseDraft.trim()) {
+        await editComplaintResponse(
+          state.complaint.backendId,
+          draftResponse.trim(),
+          "Kullanıcı taslağı güncelledi."
+        );
+      }
+      await approveComplaint(
+        state.complaint.backendId,
+        "AI destekli kontrol tamamlandı.",
+        15000
+      );
       toast.success("Şikayet onaylandı ve yanıt gönderildi.");
     } catch (err) {
       toast.error("Onaylama işlemi başarısız.");
