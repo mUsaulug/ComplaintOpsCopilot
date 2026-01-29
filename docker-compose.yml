@@ -31,9 +31,16 @@ services:
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-xiaomi/mimo-vl-flash:free}
+      - OPENROUTER_SITE_URL=${OPENROUTER_SITE_URL:-}
+      - OPENROUTER_APP_NAME=${OPENROUTER_APP_NAME:-ComplaintOpsCopilot}
       - LLM_PROVIDER=${LLM_PROVIDER:-openai}
       - RAG_TOP_K=${RAG_TOP_K:-3}
       - REVIEW_DB_PATH=/app/data/reviews.db
+      # Optimization & Stability
+      - WEB_CONCURRENCY=1
+      - SPACY_MODEL=en_core_web_lg
     volumes:
       - ./backend-python/data:/app/data
       - ./backend-python/models:/app/models
@@ -43,7 +50,8 @@ services:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/" ]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 120s
 
   # ============== JAVA BACKEND ==============
   java-backend:

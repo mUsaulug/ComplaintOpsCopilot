@@ -17,7 +17,7 @@ const INITIAL_COMPLAINT: ComplaintData = {
   timestamp: new Date().toISOString(),
   customerName: "Ahmet Yılmaz",
   customerSegment: CustomerSegment.VIP_PLATINUM,
-  maskedText: "Yükleniyor...",
+  maskedText: "Analiz Bekleniyor...",
   piiTags: []
 };
 

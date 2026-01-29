@@ -106,6 +106,51 @@ curl -X POST http://localhost:8080/api/sikayet \
 
 ---
 
+## 🤖 LLM Provider Yapılandırması
+
+ComplaintOps Copilot, üç farklı LLM sağlayıcısını destekler:
+
+| Provider | Env Değişkeni | Model Örnekleri |
+|----------|--------------|-----------------|
+| **OpenAI** | `OPENAI_API_KEY` | gpt-3.5-turbo, gpt-4 |
+| **Gemini** | `GEMINI_API_KEY` | gemini-pro |
+| **OpenRouter** | `OPENROUTER_API_KEY` | xiaomi/mimo-vl-flash:free, claude-3 |
+
+### OpenRouter Kurulumu
+
+OpenRouter, tek bir API ile 100+ farklı modele erişim sağlar.
+
+#### 1. API Key Alma
+1. [OpenRouter](https://openrouter.ai/) hesabı oluşturun
+2. [API Keys](https://openrouter.ai/keys) sayfasından yeni key oluşturun
+
+#### 2. Yapılandırma
+
+```bash
+# backend-python/.env dosyasına ekleyin:
+LLM_PROVIDER=openrouter
+OPENROUTER_API_KEY=sk-or-v1-your-key-here
+OPENROUTER_MODEL=xiaomi/mimo-vl-flash:free
+OPENROUTER_SITE_URL=http://localhost:5173
+OPENROUTER_APP_NAME=ComplaintOpsCopilot
+```
+
+#### 3. Docker ile Çalıştırma
+
+```bash
+OPENROUTER_API_KEY=your-key LLM_PROVIDER=openrouter docker compose up -d
+```
+
+### ⚠️ API Key Güvenliği
+
+> **ÖNEMLİ**: 
+> - API key'i **asla** kod veya dokümana yazmayın
+> - Key ifşa olduysa **hemen** [OpenRouter Dashboard](https://openrouter.ai/keys)'dan revoke edin
+> - `.env` dosyası `.gitignore`'dadır, commit edilmez
+> - Key'i sadece env değişkeni olarak kullanın
+
+---
+
 ## 📡 API Referansı
 
 ### POST /mask (Python)
@@ -314,7 +359,7 @@ ComplaintOpsCopilot/
 │   │   │   ├── rag_service.py         # ChromaDB RAG
 │   │   │   ├── llm_service.py         # LLM orchestration
 │   │   │   ├── review_service.py      # Human review audit
-│   │   │   └── llm_providers/         # OpenAI/Gemini providers
+│   │   │   └── llm_providers/         # OpenAI/Gemini/OpenRouter providers
 │   │   ├── ml/                        # ML training scripts
 │   │   └── rag/                       # RAG ingest scripts
 │   ├── Dockerfile                     # Python service

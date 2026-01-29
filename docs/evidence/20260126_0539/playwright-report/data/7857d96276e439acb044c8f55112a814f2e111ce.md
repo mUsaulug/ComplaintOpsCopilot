@@ -1,0 +1,98 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - region "Notifications alt+T"
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - img [ref=e7]
+      - generic [ref=e9]:
+        - generic [ref=e10]: ComplaintOps Copilot
+        - generic [ref=e11]: Fintech Core v2.4
+    - generic [ref=e12]:
+      - navigation [ref=e13]:
+        - link "Operasyon" [ref=e14] [cursor=pointer]:
+          - /url: "#"
+        - link "Arşiv" [ref=e15] [cursor=pointer]:
+          - /url: "#"
+        - link "Analitik" [ref=e16] [cursor=pointer]:
+          - /url: "#"
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - generic [ref=e19]: Zeynep Y.
+          - generic [ref=e20]: Senior Specialist
+        - generic [ref=e21]: ZY
+  - main [ref=e22]:
+    - generic [ref=e23]:
+      - generic [ref=e24]:
+        - generic [ref=e25]:
+          - generic [ref=e26]:
+            - heading "Yeni Şikayet" [level=3] [ref=e27]
+            - generic [ref=e29]:
+              - img [ref=e31]
+              - generic [ref=e33]: KVKK Uyumlu
+          - generic [ref=e34]: 20 karakter daha
+        - generic [ref=e35]:
+          - 'textbox "Şikayet metnini buraya yazın... (örn: Kartımdan bilgim dışında 500 TL çekildi)" [ref=e36]'
+          - generic [ref=e37]: 0 karakter
+        - button "Analizi Başlat" [disabled] [ref=e38]:
+          - img [ref=e39]
+          - text: Analizi Başlat
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - generic [ref=e44]:
+            - generic [ref=e45]:
+              - generic [ref=e46]:
+                - heading "Ahmet Yılmaz" [level=2] [ref=e47]
+                - generic [ref=e48]: VIP_PLATINUM
+              - paragraph [ref=e49]: 12 Yıllık Müşteri • İstanbul / TR
+            - generic [ref=e50]:
+              - paragraph [ref=e51]: CMP-2024-8921
+              - paragraph [ref=e52]: 🕒 9:02:22 AM
+          - generic [ref=e53]:
+            - generic [ref=e54]:
+              - paragraph [ref=e55]: Risk Skoru
+              - paragraph [ref=e56]: Düşük (12/100)
+            - generic [ref=e57]:
+              - paragraph [ref=e58]: Kullanım
+              - paragraph [ref=e59]: 6 Aktif Kart
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - generic [ref=e62]:
+              - heading "Şikayet İçeriği" [level=3] [ref=e63]:
+                - img [ref=e64]
+                - text: Şikayet İçeriği
+              - generic [ref=e68]:
+                - img [ref=e70]
+                - generic [ref=e72]: KVKK Uyumlu
+            - generic [ref=e73]: Analiz Bekleniyor...
+            - paragraph [ref=e74]:
+              - img [ref=e75]
+              - text: Bu görüntü KVKK kapsamında denetlenmektedir.
+          - generic [ref=e77]:
+            - heading "Geçmiş ve Loglar" [level=3] [ref=e78]:
+              - img [ref=e79]
+              - text: Geçmiş ve Loglar
+            - generic [ref=e83]:
+              - generic [ref=e86]:
+                - paragraph [ref=e87]: "Önceki Şikayet Kapandı: #CMP-2023-45"
+                - paragraph [ref=e88]: 14 Ocak 2024
+              - generic [ref=e91]:
+                - paragraph [ref=e92]: "CRM Notu Eklendi: Müşteri iade talep etti."
+                - paragraph [ref=e93]: 02 Şubat 2024
+    - generic [ref=e97]:
+      - generic [ref=e98]:
+        - button "Beklet Alt + H" [disabled] [ref=e99]:
+          - generic [ref=e100]: Beklet
+          - generic [ref=e101]: Alt + H
+        - button "Reddet Alt + R" [disabled] [ref=e102]:
+          - generic [ref=e103]: Reddet
+          - generic [ref=e104]: Alt + R
+      - generic [ref=e105]:
+        - generic [ref=e106]:
+          - paragraph [ref=e107]: Durum
+          - paragraph [ref=e108]: Onay Bekliyor
+        - button "İncele & Gönder ⌘ + Enter" [disabled] [ref=e109]:
+          - generic [ref=e110]: İncele & Gönder
+          - generic [ref=e111]: ⌘ + Enter
+```

@@ -117,6 +117,34 @@ Bu doküman, sistemin çeşitli hata durumlarında nasıl davrandığını açı
 Detaylar için: [docs/FAILURE_MODES.md](docs/FAILURE_MODES.md)
 ```
 
+
 ---
 
-*Bu doküman v1.0 - 27 Aralık 2024*
+## 6. Infrastructure Hataları (Runtime/Deployment)
+
+### 6.1 Gunicorn Worker OOM Loop
+**Senaryo:** Python container RAM yetersizliği veya yanlış konfigürasyon.
+**Belirti:**
+- Log: `Worker was sent SIGKILL! Perhaps out of memory?`
+- Log: `WORKER TIMEOUT`
+- Container sürekli restart eder.
+
+**Çözüm (Uygulanan):**
+- `WEB_CONCURRENCY=1` (Tek worker)
+- `--preload` (Modeli master process yükler, copy-on-write RAM tasarrufu)
+- `TIMEOUT=300` (Büyük modellerin yüklenmesi için 5dk süre)
+- Build-time model download (Runtime'da indirme engellendi)
+
+### 6.2 Docker Build Context Şişmesi
+**Senaryo:** `python-ai` build context root folder ise.
+**Belirti:** Build sırasında GB'larca veri transferi.
+**Çözüm:** `.dockerignore` dosyası ile `venv`, `node_modules`, `data` hariç tutuldu.
+
+### 6.3 PyTorch GPU Bloom
+**Senaryo:** `sentence-transformers` varsayılan olarak CUDA/Nvidia bağımlılıklarını çeker.
+**Belirti:** İmaj boyutu > 6GB, build süresi çok uzun.
+**Çözüm:** Dockerfile'da `pip install torch --index-url https://download.pytorch.org/whl/cpu` ile CPU-only zorlandı.
+
+---
+
+*Bu doküman v1.1 - 26 Ocak 2026*

@@ -3,7 +3,7 @@ import { SimilarComplaint, BackendComplaintResponse, BackendSistemDurumu } from 
 
 // Config
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-const DEFAULT_TIMEOUT = 30000;
+const DEFAULT_TIMEOUT = 90000;
 const MAX_RETRIES = 3;
 
 interface RequestConfig extends RequestInit {
@@ -54,7 +54,7 @@ async function fetchWithRetry(url: string, options: RequestConfig = {}): Promise
 export async function submitComplaint(text: string): Promise<BackendComplaintResponse> {
   const response = await fetchWithRetry(`${BACKEND_URL}/api/sikayet`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
     body: JSON.stringify({ metin: text })
   });
 
@@ -105,7 +105,7 @@ export async function editComplaintResponse(complaintId: number, editedResponse:
 export async function approveComplaint(complaintId: number, notes?: string): Promise<void> {
   const response = await fetchWithRetry(`${BACKEND_URL}/api/complaints/${complaintId}/approve`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
     body: JSON.stringify({ notes: notes || '' })
   });
   if (!response.ok) throw new Error("Onaylama hatası");
@@ -114,7 +114,7 @@ export async function approveComplaint(complaintId: number, notes?: string): Pro
 export async function rejectComplaint(complaintId: number, notes?: string): Promise<void> {
   const response = await fetchWithRetry(`${BACKEND_URL}/api/complaints/${complaintId}/reject`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
     body: JSON.stringify({ notes: notes || '' })
   });
   if (!response.ok) throw new Error("Reddetme hatası");

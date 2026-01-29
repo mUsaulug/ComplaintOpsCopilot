@@ -22,7 +22,7 @@ public class ComplaintController {
     private final ComplaintRepository complaintRepository;
     private final ComplaintEditRepository editRepository;
     private final org.springframework.web.reactive.function.client.WebClient.Builder webClientBuilder;
-    private static final Duration SERVICE_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration SERVICE_TIMEOUT = Duration.ofSeconds(120);
 
     @org.springframework.beans.factory.annotation.Value("${ai-service.url}")
     private String aiServiceUrl;

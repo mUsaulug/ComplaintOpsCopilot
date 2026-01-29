@@ -34,6 +34,9 @@ class LLMFactory:
                 elif provider_type == "openai":
                     from app.services.llm_providers.openai import OpenAIProvider
                     cls._instance = OpenAIProvider()
+                elif provider_type == "openrouter":
+                    from app.services.llm_providers.openrouter import OpenRouterProvider
+                    cls._instance = OpenRouterProvider()
                 else:
                     logger.warning(f"Unknown provider {provider_type}, falling back to Mock/OpenAI logic or Error")
                     # Fallback or Error. For now let's default to OpenAI which has safe guards

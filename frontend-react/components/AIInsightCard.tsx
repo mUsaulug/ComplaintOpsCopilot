@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { AnalysisResult, Priority } from '../types';
+import { AnalysisResult, Priority, CATEGORY_LABELS } from '../types';
 import { Icons } from '../constants';
 
 interface Props {
@@ -82,7 +82,7 @@ const AIInsightCard: React.FC<Props> = ({ analysis, isLoading, needsHumanReview 
         <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
           <p className="text-[10px] text-slate-400 font-bold uppercase mb-2">Kategori</p>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-slate-700">{analysis.category.replace(/_/g, ' ')}</span>
+            <span className="text-sm font-bold text-slate-700">{CATEGORY_LABELS[analysis.category]}</span>
           </div>
         </div>
         <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">

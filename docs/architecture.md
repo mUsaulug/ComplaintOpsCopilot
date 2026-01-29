@@ -179,3 +179,27 @@ LOG_LEVEL=INFO
 RAG_TOP_K=4
 ALLOW_RAW_PII_RESPONSE=false
 ```
+
+---
+
+## Deployment Architecture (Docker Compose)
+
+Sistem production ortamında Docker Compose ile yönetilir.
+
+### Servis Yapılandırması
+- **python-ai**:
+  - `WEB_CONCURRENCY=1`: Bellek yönetimi için tek process
+  - `--preload`: Memory sharing (Copy-on-Write)
+  - `CMD`: Build-time model indirmesi zorunlu (Runtime download yasak)
+  - CPU-only PyTorch & Transformers
+- **java-backend**:
+  - Multi-stage build (Maven imajı)
+  - Healthcheck bağımlılıkları (db ve python-ai sağlıklı olmadan başlamaz)
+
+### Memory Optimizasyonu (OOM Önleme)
+Python servisi büyük ML modelleri (Spacy lg, Sentence-Transformers) kullandığı için aşağıdaki önlemler alınmıştır:
+1. **Tek Worker:** 4 worker yerine 1 worker.
+2. **Preload:** Modeller master process'te yüklenir, worker ile paylaşılır.
+3. **CPU-only Wheels:** PyTorch GPU kütüphaneleri hariç tutulur (~2GB tasarruf).
+4. **Timeout:** Gunicorn timeout 300s (ilk yükleme için).
+
