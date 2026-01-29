@@ -101,7 +101,11 @@ const App: React.FC = () => {
     if (!state.complaint.backendId) return;
     setState(prev => ({ ...prev, isSubmitting: true }));
     try {
-      await approveComplaint(state.complaint.backendId, "AI destekli kontrol tamamlandı.");
+      await approveComplaint(
+        state.complaint.backendId,
+        "AI destekli kontrol tamamlandı.",
+        15000
+      );
       toast.success("Şikayet onaylandı ve yanıt gönderildi.");
     } catch (err) {
       toast.error("Onaylama işlemi başarısız.");
