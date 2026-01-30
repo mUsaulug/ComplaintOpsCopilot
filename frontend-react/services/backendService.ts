@@ -102,11 +102,16 @@ export async function editComplaintResponse(complaintId: number, editedResponse:
   return await response.json();
 }
 
-export async function approveComplaint(complaintId: number, notes?: string): Promise<void> {
+export async function approveComplaint(
+  complaintId: number,
+  notes?: string,
+  timeout?: number
+): Promise<void> {
   const response = await fetchWithRetry(`${BACKEND_URL}/api/complaints/${complaintId}/approve`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json; charset=utf-8' },
-    body: JSON.stringify({ notes: notes || '' })
+    body: JSON.stringify({ notes: notes || '' }),
+    timeout
   });
   if (!response.ok) throw new Error("Onaylama hatası");
 }
