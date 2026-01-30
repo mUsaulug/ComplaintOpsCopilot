@@ -67,6 +67,8 @@ public class OrchestratorService {
             failedComplaint.setNeedsHumanReview(true);
             failedComplaint.setActionPlan("[\"Manuel inceleme gerekli: Maskeleme servisi hatası\"]");
             failedComplaint.setCustomerReplyDraft("Şikayetiniz alındı. Manuel inceleme için yönlendirildi.");
+            failedComplaint.setRagStatus("UNAVAILABLE");
+            failedComplaint.setLlmStatus("UNAVAILABLE");
             failedComplaint.setStatus(ComplaintStatus.MASKING_FAILED);
             return repository.save(failedComplaint);
         }
@@ -84,6 +86,8 @@ public class OrchestratorService {
             failedComplaint.setNeedsHumanReview(true);
             failedComplaint.setActionPlan("[\"Manuel inceleme gerekli: Boş maskeleme yanıtı\"]");
             failedComplaint.setCustomerReplyDraft("Şikayetiniz alındı. Manuel inceleme için yönlendirildi.");
+            failedComplaint.setRagStatus("UNAVAILABLE");
+            failedComplaint.setLlmStatus("UNAVAILABLE");
             failedComplaint.setStatus(ComplaintStatus.MASKING_FAILED);
             return repository.save(failedComplaint);
         }
@@ -196,7 +200,9 @@ public class OrchestratorService {
                 requestId, triageResp.getCategory(), triageResp.getUrgency(), triageResp.isNeedsHumanReview(),
                 ragStatus, llmStatus);
 
-        return repository.save(complaint);
+        Complaint savedComplaint = repository.save(complaint);
+        indexComplaintForSimilarity(savedComplaint);
+        return savedComplaint;
     }
 
     private Retry buildRetrySpec(String stage) {
@@ -226,5 +232,27 @@ public class OrchestratorService {
     public Complaint getComplaint(Long id) {
         return repository.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Complaint not found"));
+    }
+
+    private void indexComplaintForSimilarity(Complaint complaint) {
+        if (complaint == null || complaint.getId() == null || complaint.getMaskedText() == null) {
+            return;
+        }
+        try {
+            var webClient = webClientBuilder.baseUrl(Objects.requireNonNull(aiServiceUrl)).build();
+            webClient.post()
+                    .uri("/index-complaint")
+                    .bodyValue(java.util.Map.of(
+                            "complaint_id", complaint.getId().toString(),
+                            "masked_text", complaint.getMaskedText(),
+                            "category", complaint.getCategory() != null ? complaint.getCategory() : "",
+                            "status", complaint.getStatus() != null ? complaint.getStatus().name() : "",
+                            "created_at", complaint.getCreatedAt() != null ? complaint.getCreatedAt().toString() : ""))
+                    .retrieve()
+                    .toBodilessEntity()
+                    .block(AI_TIMEOUT);
+        } catch (Exception e) {
+            logger.warn("Similarity indexing failed for complaint_id={}: {}", complaint.getId(), e.getMessage());
+        }
     }
 }
