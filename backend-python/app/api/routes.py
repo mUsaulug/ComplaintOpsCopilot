@@ -108,7 +108,15 @@ def predict_triage(payload: TriageRequest, request: Request):
 
 @router.post("/retrieve", response_model=RAGResponse)
 def retrieve_docs(payload: RAGRequest, request: Request):
-    sanitized = sanitize_input(payload.text, request.state.request_id)
+    try:
+        sanitized = sanitize_input(payload.text, request.state.request_id)
+    except HTTPException as exc:
+        logger.error(
+            "rag_masking_failed request_id=%s error=%s",
+            request.state.request_id,
+            exc.detail,
+        )
+        return RAGResponse(relevant_sources=[])
     log_sanitized_request(
         "/retrieve",
         sanitized["masked_text"],
