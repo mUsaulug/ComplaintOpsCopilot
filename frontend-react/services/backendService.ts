@@ -60,7 +60,14 @@ export async function submitComplaint(text: string): Promise<BackendComplaintRes
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`Backend hatası (${response.status}): ${errorBody}`);
+    let message = errorBody;
+    try {
+      const parsed = JSON.parse(errorBody);
+      message = parsed.detail || parsed.error || parsed.message || errorBody;
+    } catch (err) {
+      // Keep raw text if not JSON
+    }
+    throw new Error(`Backend hatası (${response.status}): ${message}`);
   }
 
   return await response.json();

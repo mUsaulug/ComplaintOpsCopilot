@@ -17,14 +17,19 @@ class RAGManager:
         # Multilingual embedding for Turkish support
         # Default: paraphrase-multilingual-MiniLM-L12-v2 (50+ languages including Turkish)
         # Alternative: all-MiniLM-L6-v2 (English-only, faster)
+        embedding_mode = os.getenv("RAG_EMBEDDING_MODE", "").lower()
         embedding_model = os.getenv(
             "RAG_EMBEDDING_MODEL",
             "paraphrase-multilingual-MiniLM-L12-v2"
         )
-        self.embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
-            model_name=embedding_model
-        )
-        self.logger.info(f"RAG initialized with embedding model: {embedding_model}")
+        if embedding_mode == "default" or embedding_model.lower() == "default":
+            self.embedding_fn = embedding_functions.DefaultEmbeddingFunction()
+            self.logger.warning("RAG embedding mode=default (offline-friendly).")
+        else:
+            self.embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
+                model_name=embedding_model
+            )
+            self.logger.info(f"RAG initialized with embedding model: {embedding_model}")
         
         self.collection = self.client.get_or_create_collection(
             name="complaint_sops",

@@ -47,6 +47,30 @@ const App: React.FC = () => {
       const backendResult = await submitComplaint(complaintDraft.trim());
 
       // 2. Backend response'u frontend format'ına çevir
+      if (backendResult.durum === 'MASKELEME_HATASI') {
+        setState(prev => ({
+          ...prev,
+          complaint: {
+            ...prev.complaint,
+            id: backendResult.id.toString(),
+            backendId: backendResult.id,
+            maskedText: backendResult.maskedText,
+            piiTags: [],
+            insanIncelemesiGerekli: backendResult.insan_incelemesi_gerekli,
+            reviewId: backendResult.review_id,
+            sistemDurumu: backendResult.sistem_durumu,
+            reviewSyncFailed: backendResult.review_sync_failed,
+            durum: backendResult.durum
+          },
+          analysis: null,
+          suggestion: null,
+          isLoading: false,
+          error: 'PII maskeleme hatası: Şikayet manuel incelemeye yönlendirildi.'
+        }));
+        toast.error("Maskeleme hatası: manuel inceleme gerekli.");
+        return;
+      }
+
       const { analysis, suggestion } = adaptBackendResponse(backendResult);
 
       // 3. State'i güncelle

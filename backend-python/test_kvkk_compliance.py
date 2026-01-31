@@ -3,6 +3,9 @@ P0 Test Suite: KVKK Compliance Tests for Python AI Service
 T1: Fail-Closed - Masking errors return proper HTTP errors
 T2: Log sanitization - Raw PII never logged
 """
+import os
+os.environ.setdefault("PII_REGEX_ONLY", "true")
+
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
@@ -77,7 +80,7 @@ class TestLogSanitization:
         # Capture logs
         log_capture = io.StringIO()
         handler = logging.StreamHandler(log_capture)
-        logger = logging.getLogger("complaintops.ai_service")
+        logger = logging.getLogger("complaintops.api")
         logger.addHandler(handler)
         logger.setLevel(logging.INFO)
         
@@ -105,7 +108,8 @@ class TestNoRawTextStorage:
         from app.services.review_service import review_store
         
         # Create a review with masked text
-        review_id = "test-review-123"
+        import uuid
+        review_id = f"test-review-{uuid.uuid4()}"
         masked_text = "Şikayet: [MASKED_TCKN] hesabından işlem"
         
         record = review_store.create_review(

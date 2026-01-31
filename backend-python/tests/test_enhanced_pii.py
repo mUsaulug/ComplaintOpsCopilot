@@ -1,5 +1,11 @@
+import os
 import pytest
 from app.services.masking_service import masker
+
+pytestmark = pytest.mark.skipif(
+    os.getenv("PII_REGEX_ONLY", "false").lower() == "true",
+    reason="PII_REGEX_ONLY enabled: Presidio NLP tests skipped for offline runs.",
+)
 
 class TestPersonMasking:
     """PERSON entity detection"""
