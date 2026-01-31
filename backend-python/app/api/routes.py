@@ -70,7 +70,13 @@ def mask_pii(payload: MaskingRequest, request: Request):
 
 @router.post("/predict", response_model=TriageResponse)
 def predict_triage(payload: TriageRequest, request: Request):
-    sanitized = sanitize_input(payload.text, request.state.request_id)
+    if payload.already_masked:
+        sanitized = {
+            "masked_text": payload.text,
+            "masked_entities": [],
+        }
+    else:
+        sanitized = sanitize_input(payload.text, request.state.request_id)
     log_sanitized_request(
         "/predict",
         sanitized["masked_text"],
@@ -109,7 +115,13 @@ def predict_triage(payload: TriageRequest, request: Request):
 @router.post("/retrieve", response_model=RAGResponse)
 def retrieve_docs(payload: RAGRequest, request: Request):
     try:
-        sanitized = sanitize_input(payload.text, request.state.request_id)
+        if payload.already_masked:
+            sanitized = {
+                "masked_text": payload.text,
+                "masked_entities": [],
+            }
+        else:
+            sanitized = sanitize_input(payload.text, request.state.request_id)
     except HTTPException as exc:
         logger.error(
             "rag_masking_failed request_id=%s error=%s",
@@ -128,7 +140,13 @@ def retrieve_docs(payload: RAGRequest, request: Request):
 
 @router.post("/generate", response_model=GenerateResponse)
 def generate_response(payload: GenerateRequest, request: Request):
-    sanitized = sanitize_input(payload.text, request.state.request_id)
+    if payload.already_masked:
+        sanitized = {
+            "masked_text": payload.text,
+            "masked_entities": [],
+        }
+    else:
+        sanitized = sanitize_input(payload.text, request.state.request_id)
     log_sanitized_request(
         "/generate",
         sanitized["masked_text"],

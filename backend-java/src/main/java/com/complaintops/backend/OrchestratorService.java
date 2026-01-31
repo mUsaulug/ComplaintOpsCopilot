@@ -98,10 +98,13 @@ public class OrchestratorService {
         // 2. Triage (with confidence tracking)
         DTOs.TriageResponseFull triageResp;
         try {
+            DTOs.TriageRequest triageRequest = new DTOs.TriageRequest();
+            triageRequest.setText(safeText);
+            triageRequest.setAlreadyMasked(true);
             triageResp = webClient.post()
                     .uri("/predict")
                     .header("X-Request-ID", requestId)
-                    .bodyValue(new DTOs.TriageRequest(safeText))
+                    .bodyValue(triageRequest)
                     .retrieve()
                     .bodyToMono(DTOs.TriageResponseFull.class)
                     .retryWhen(buildRetrySpec("triage"))
@@ -119,10 +122,14 @@ public class OrchestratorService {
         DTOs.RAGResponse ragResp;
         String ragStatus = "OK";
         try {
+            DTOs.RAGRequest ragRequest = new DTOs.RAGRequest();
+            ragRequest.setText(safeText);
+            ragRequest.setCategory(triageResp.getCategory());
+            ragRequest.setAlreadyMasked(true);
             ragResp = webClient.post()
                     .uri("/retrieve")
                     .header("X-Request-ID", requestId)
-                    .bodyValue(new DTOs.RAGRequest(safeText, triageResp.getCategory()))
+                    .bodyValue(ragRequest)
                     .retrieve()
                     .bodyToMono(DTOs.RAGResponse.class)
                     .retryWhen(buildRetrySpec("rag"))
@@ -138,14 +145,16 @@ public class OrchestratorService {
         DTOs.GenerateResponse genResp;
         String llmStatus = "OK";
         try {
+            DTOs.GenerateRequest generateRequest = new DTOs.GenerateRequest();
+            generateRequest.setText(safeText);
+            generateRequest.setCategory(triageResp.getCategory());
+            generateRequest.setUrgency(triageResp.getUrgency());
+            generateRequest.setRelevantSources(ragResp.getRelevantSources());
+            generateRequest.setAlreadyMasked(true);
             genResp = webClient.post()
                     .uri("/generate")
                     .header("X-Request-ID", requestId)
-                    .bodyValue(new DTOs.GenerateRequest(
-                            safeText,
-                            triageResp.getCategory(),
-                            triageResp.getUrgency(),
-                            ragResp.getRelevantSources()))
+                    .bodyValue(generateRequest)
                     .retrieve()
                     .bodyToMono(DTOs.GenerateResponse.class)
                     .retryWhen(buildRetrySpec("generate"))

@@ -31,8 +31,8 @@ async function fetchWithRetry(url: string, options: RequestConfig = {}): Promise
 
       clearTimeout(id);
 
-      // 503 Service Unavailable requires retry
-      if (response.status === 503) {
+      // Retry on transient errors
+      if ([429, 502, 503, 504].includes(response.status)) {
         throw new Error("Service Unavailable");
       }
 
