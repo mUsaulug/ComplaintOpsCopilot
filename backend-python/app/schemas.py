@@ -38,6 +38,7 @@ class MaskingResponse(BaseModel):
 
 class TriageRequest(BaseModel):
     text: str
+    already_masked: bool = False
 
 class TriageResponse(BaseModel):
     category: CategoryLiteral
@@ -53,6 +54,7 @@ class TriageResponse(BaseModel):
 class RAGRequest(BaseModel):
     text: str
     category: Optional[str] = None
+    already_masked: bool = False
 
 class RAGResponse(BaseModel):
     relevant_sources: List[SourceItem]
@@ -62,6 +64,7 @@ class GenerateRequest(BaseModel):
     category: CategoryLiteral
     urgency: str
     relevant_sources: List[SourceItem] = Field(default_factory=list)
+    already_masked: bool = False
 
 class GenerateResponse(BaseModel):
     """Extended response with risk assessment fields."""
