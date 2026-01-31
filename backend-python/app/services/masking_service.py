@@ -4,13 +4,17 @@ from presidio_anonymizer.entities import OperatorConfig
 from typing import List, Dict, Tuple
 import re
 import logging
+import os
 
 class PIIMasker:
     def __init__(self):
-        self.analyzer = AnalyzerEngine()
+        self.regex_only_mode = os.getenv("PII_REGEX_ONLY", "false").lower() == "true"
+        self.analyzer = None if self.regex_only_mode else AnalyzerEngine()
         self.anonymizer = AnonymizerEngine()
         self.pdf_analyzer = None # Placeholder for PDF analysis if needed
         self.logger = logging.getLogger("complaintops.pii_masker")
+        if self.regex_only_mode:
+            self.logger.warning("PII_REGEX_ONLY enabled: Presidio NLP analysis disabled.")
         
         # Add Custom Recognizer for Turkish TCKN (Identity Number)
         # TCKN is 11 digits, valid algorithm check is complex but for regex we can use \d{11}
@@ -21,7 +25,8 @@ class PIIMasker:
             patterns=[tckn_pattern],
             context=["tc", "tckn", "kimlik", "no", "numarası"]
         )
-        self.analyzer.registry.add_recognizer(tckn_recognizer)
+        if self.analyzer:
+            self.analyzer.registry.add_recognizer(tckn_recognizer)
 
         # IBAN is usually supported, but we can verify or add specific TR IBAN regex
         # TR IBAN: TR + 24 digits
@@ -31,7 +36,8 @@ class PIIMasker:
             patterns=[tr_iban_pattern],
             context=["iban", "hesap"]
         )
-        self.analyzer.registry.add_recognizer(tr_iban_recognizer)
+        if self.analyzer:
+            self.analyzer.registry.add_recognizer(tr_iban_recognizer)
 
         # 1. PERSON Entity (Presidio built-in + Turkish context)
         # Note: We add a broad pattern for names (capitalized words) with low score
@@ -47,7 +53,8 @@ class PIIMasker:
             context=["sayın", "bay", "bayan", "adı", "soyadı", "müşteri", "kişi"],
             deny_list=["Bu", "Şu", "O", "Ben", "Sen", "Biz", "Siz", "Onlar", "Evet", "Hayır", "Yok", "Var", "Merhabalar", "Merhaba", "Selam"]
         )
-        self.analyzer.registry.add_recognizer(person_recognizer)
+        if self.analyzer:
+            self.analyzer.registry.add_recognizer(person_recognizer)
 
         # 2. CCV/CVV Recognition (Context-Required)
         ccv_pattern = Pattern(
@@ -61,7 +68,8 @@ class PIIMasker:
             context=["cvv", "ccv", "güvenlik kodu", "güvenlik numarası", 
                      "arkasındaki", "kartın arkası", "3 haneli", "4 haneli"]
         )
-        self.analyzer.registry.add_recognizer(ccv_recognizer)
+        if self.analyzer:
+            self.analyzer.registry.add_recognizer(ccv_recognizer)
 
         # 3. PASSWORD/PIN Recognition
         password_pattern = Pattern(
@@ -75,7 +83,8 @@ class PIIMasker:
             context=["şifre", "parola", "pin", "gizli kod", "internet şifresi",
                      "mobil şifre", "şifrem", "parolam", "password", "pin kodu"]
         )
-        self.analyzer.registry.add_recognizer(password_recognizer)
+        if self.analyzer:
+            self.analyzer.registry.add_recognizer(password_recognizer)
 
         # 4. DATE_OF_BIRTH Recognition (Turkish formats)
         dob_patterns = [
@@ -88,7 +97,8 @@ class PIIMasker:
             patterns=dob_patterns,
             context=["doğum", "doğum tarihi", "d.tarihi", "yaş", "doğumlu"]
         )
-        self.analyzer.registry.add_recognizer(dob_recognizer)
+        if self.analyzer:
+            self.analyzer.registry.add_recognizer(dob_recognizer)
 
         # 5. MAIDEN_NAME Recognition (Context-only)
         maiden_pattern = Pattern(
@@ -102,7 +112,8 @@ class PIIMasker:
             context=["kızlık soyadı", "anne kızlık", "annenin kızlık", 
                      "kızlık soyadınız", "güvenlik sorusu"]
         )
-        self.analyzer.registry.add_recognizer(maiden_recognizer)
+        if self.analyzer:
+            self.analyzer.registry.add_recognizer(maiden_recognizer)
 
         # 6. ACCOUNT_NUMBER Recognition
         account_pattern = Pattern(
@@ -116,9 +127,16 @@ class PIIMasker:
             context=["hesap no", "hesap numarası", "hesabım", "hesap", 
                      "müşteri no", "müşteri numarası"]
         )
-        self.analyzer.registry.add_recognizer(account_recognizer)
+        if self.analyzer:
+            self.analyzer.registry.add_recognizer(account_recognizer)
 
     def mask(self, text: str) -> Dict:
+        if not self.analyzer:
+            return {
+                "original_text": text,
+                "masked_text": text,
+                "masked_entities": [],
+            }
         # Analyze
         results = self.analyzer.analyze(
             text=text, 
