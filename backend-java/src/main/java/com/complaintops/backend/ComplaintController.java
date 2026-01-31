@@ -91,12 +91,12 @@ public class ComplaintController {
 
         try {
             var webClient = webClientBuilder.baseUrl(java.util.Objects.requireNonNull(aiServiceUrl)).build();
-            var response = webClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/similar/{id}")
-                            .queryParam("query_text", complaint.getMaskedText())
-                            .queryParam("limit", limit)
-                            .build(id))
+            var response = webClient.post()
+                    .uri("/similar/{id}", id)
+                    .bodyValue(java.util.Map.of(
+                            "query_text", complaint.getMaskedText(),
+                            "limit", limit,
+                            "already_masked", true))
                     .retrieve()
                     .bodyToMono(java.util.Map.class)
                     .block(SERVICE_TIMEOUT);
