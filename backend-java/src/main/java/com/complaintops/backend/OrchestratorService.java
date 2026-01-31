@@ -195,6 +195,7 @@ public class OrchestratorService {
         // Human-in-the-Loop fields
         complaint.setNeedsHumanReview(triageResp.isNeedsHumanReview());
         complaint.setReviewId(triageResp.getReviewId());
+        complaint.setReviewSyncFailed(false);
 
         // Confidence scores
         complaint.setCategoryConfidence(triageResp.getCategoryConfidence());

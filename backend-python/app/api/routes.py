@@ -319,7 +319,11 @@ def find_similar_complaints(
     request: Request = None,
     already_masked: bool = False,
 ):
-    """Find complaints similar to the given query text."""
+    """Find complaints similar to the given query text (deprecated GET)."""
+    logger.warning(
+        "deprecated_endpoint endpoint=/similar/{complaint_id} request_id=%s",
+        request.state.request_id if request else "-"
+    )
     request_id = request.state.request_id if request else "-"
     if already_masked:
         scan_result = scan_text(query_text)

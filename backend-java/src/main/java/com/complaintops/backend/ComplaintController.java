@@ -78,6 +78,8 @@ public class ComplaintController {
                 complaint.getRagStatus(),
                 complaint.getLlmStatus()));
 
+        response.setReviewSyncFailed(complaint.isReviewSyncFailed());
+
         return ResponseEntity.ok(response);
     }
 
@@ -87,6 +89,7 @@ public class ComplaintController {
     public ResponseEntity<?> findSimilarComplaints(
             @PathVariable Long id,
             @RequestParam(defaultValue = "5") int limit) {
+        logger.warn("Deprecated endpoint used: GET /api/complaints/{}/similar", id);
         Complaint complaint = orchestratorService.getComplaint(id);
 
         try {
@@ -146,6 +149,7 @@ public class ComplaintController {
             @PathVariable Long id,
             @RequestBody(required = false) ApprovalRequest request) {
         Complaint complaint = orchestratorService.getComplaint(id);
+        boolean reviewSyncFailed = false;
 
         // If has review_id, call Python to update review status
         if (complaint.getReviewId() != null) {
@@ -161,11 +165,13 @@ public class ComplaintController {
                         .block(SERVICE_TIMEOUT);
             } catch (Exception e) {
                 logger.warn("Review approve failed for complaint_id={} review_id={}: {}", id, complaint.getReviewId(), e.getMessage());
+                reviewSyncFailed = true;
             }
         }
 
         // Update complaint status
         complaint.setStatus(ComplaintStatus.RESOLVED);
+        complaint.setReviewSyncFailed(reviewSyncFailed);
         return ResponseEntity.ok(complaintRepository.save(complaint));
     }
 
@@ -174,6 +180,7 @@ public class ComplaintController {
             @PathVariable Long id,
             @RequestBody(required = false) ApprovalRequest request) {
         Complaint complaint = orchestratorService.getComplaint(id);
+        boolean reviewSyncFailed = false;
 
         // If has review_id, call Python to update review status
         if (complaint.getReviewId() != null) {
@@ -189,10 +196,12 @@ public class ComplaintController {
                         .block(SERVICE_TIMEOUT);
             } catch (Exception e) {
                 logger.warn("Review reject failed for complaint_id={} review_id={}: {}", id, complaint.getReviewId(), e.getMessage());
+                reviewSyncFailed = true;
             }
         }
 
-        // Keep status as NEW or set a REJECTED status if needed
+        complaint.setStatus(ComplaintStatus.REJECTED);
+        complaint.setReviewSyncFailed(reviewSyncFailed);
         return ResponseEntity.ok(complaintRepository.save(complaint));
     }
 
@@ -231,6 +240,7 @@ public class ComplaintController {
             case MASKING_FAILED -> "MASKELEME_HATASI";
             case ANALYZED -> "ANALIZ_EDILDI";
             case RESOLVED -> "COZUMLENDI";
+            case REJECTED -> "REDDEDILDI";
         };
     }
 
@@ -314,6 +324,9 @@ public class ComplaintController {
 
         @JsonProperty("sistem_durumu")
         private SistemDurumu sistemDurumu; // Graceful degradation status
+
+        @JsonProperty("review_sync_failed")
+        private boolean reviewSyncFailed;
     }
 
     @Data
