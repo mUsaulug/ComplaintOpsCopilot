@@ -50,6 +50,8 @@ public class Complaint {
     private String riskLevel = "MEDIUM"; // LOW, MEDIUM, HIGH
     private String triageStatus = "OK"; // OK, FAILED, FALLBACK
 
+    private boolean reviewSyncFailed = false;
+
     @Enumerated(EnumType.STRING)
     private ComplaintStatus status = ComplaintStatus.NEW;
 
@@ -60,5 +62,6 @@ enum ComplaintStatus {
     NEW,
     MASKING_FAILED, // PII maskeleme hatası - manuel inceleme gerekli
     ANALYZED,
-    RESOLVED
+    RESOLVED,
+    REJECTED
 }

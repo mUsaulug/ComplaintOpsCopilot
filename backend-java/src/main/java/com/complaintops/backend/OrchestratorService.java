@@ -67,6 +67,8 @@ public class OrchestratorService {
             failedComplaint.setNeedsHumanReview(true);
             failedComplaint.setActionPlan("[\"Manuel inceleme gerekli: Maskeleme servisi hatası\"]");
             failedComplaint.setCustomerReplyDraft("Şikayetiniz alındı. Manuel inceleme için yönlendirildi.");
+            failedComplaint.setRagStatus("UNAVAILABLE");
+            failedComplaint.setLlmStatus("UNAVAILABLE");
             failedComplaint.setStatus(ComplaintStatus.MASKING_FAILED);
             return repository.save(failedComplaint);
         }
@@ -84,6 +86,8 @@ public class OrchestratorService {
             failedComplaint.setNeedsHumanReview(true);
             failedComplaint.setActionPlan("[\"Manuel inceleme gerekli: Boş maskeleme yanıtı\"]");
             failedComplaint.setCustomerReplyDraft("Şikayetiniz alındı. Manuel inceleme için yönlendirildi.");
+            failedComplaint.setRagStatus("UNAVAILABLE");
+            failedComplaint.setLlmStatus("UNAVAILABLE");
             failedComplaint.setStatus(ComplaintStatus.MASKING_FAILED);
             return repository.save(failedComplaint);
         }
@@ -94,10 +98,13 @@ public class OrchestratorService {
         // 2. Triage (with confidence tracking)
         DTOs.TriageResponseFull triageResp;
         try {
+            DTOs.TriageRequest triageRequest = new DTOs.TriageRequest();
+            triageRequest.setText(safeText);
+            triageRequest.setAlreadyMasked(true);
             triageResp = webClient.post()
                     .uri("/predict")
                     .header("X-Request-ID", requestId)
-                    .bodyValue(new DTOs.TriageRequest(safeText))
+                    .bodyValue(triageRequest)
                     .retrieve()
                     .bodyToMono(DTOs.TriageResponseFull.class)
                     .retryWhen(buildRetrySpec("triage"))
@@ -115,10 +122,14 @@ public class OrchestratorService {
         DTOs.RAGResponse ragResp;
         String ragStatus = "OK";
         try {
+            DTOs.RAGRequest ragRequest = new DTOs.RAGRequest();
+            ragRequest.setText(safeText);
+            ragRequest.setCategory(triageResp.getCategory());
+            ragRequest.setAlreadyMasked(true);
             ragResp = webClient.post()
                     .uri("/retrieve")
                     .header("X-Request-ID", requestId)
-                    .bodyValue(new DTOs.RAGRequest(safeText, triageResp.getCategory()))
+                    .bodyValue(ragRequest)
                     .retrieve()
                     .bodyToMono(DTOs.RAGResponse.class)
                     .retryWhen(buildRetrySpec("rag"))
@@ -134,14 +145,16 @@ public class OrchestratorService {
         DTOs.GenerateResponse genResp;
         String llmStatus = "OK";
         try {
+            DTOs.GenerateRequest generateRequest = new DTOs.GenerateRequest();
+            generateRequest.setText(safeText);
+            generateRequest.setCategory(triageResp.getCategory());
+            generateRequest.setUrgency(triageResp.getUrgency());
+            generateRequest.setRelevantSources(ragResp.getRelevantSources());
+            generateRequest.setAlreadyMasked(true);
             genResp = webClient.post()
                     .uri("/generate")
                     .header("X-Request-ID", requestId)
-                    .bodyValue(new DTOs.GenerateRequest(
-                            safeText,
-                            triageResp.getCategory(),
-                            triageResp.getUrgency(),
-                            ragResp.getRelevantSources()))
+                    .bodyValue(generateRequest)
                     .retrieve()
                     .bodyToMono(DTOs.GenerateResponse.class)
                     .retryWhen(buildRetrySpec("generate"))
@@ -182,6 +195,7 @@ public class OrchestratorService {
         // Human-in-the-Loop fields
         complaint.setNeedsHumanReview(triageResp.isNeedsHumanReview());
         complaint.setReviewId(triageResp.getReviewId());
+        complaint.setReviewSyncFailed(false);
 
         // Confidence scores
         complaint.setCategoryConfidence(triageResp.getCategoryConfidence());
@@ -196,7 +210,9 @@ public class OrchestratorService {
                 requestId, triageResp.getCategory(), triageResp.getUrgency(), triageResp.isNeedsHumanReview(),
                 ragStatus, llmStatus);
 
-        return repository.save(complaint);
+        Complaint savedComplaint = repository.save(complaint);
+        indexComplaintForSimilarity(savedComplaint);
+        return savedComplaint;
     }
 
     private Retry buildRetrySpec(String stage) {
@@ -226,5 +242,27 @@ public class OrchestratorService {
     public Complaint getComplaint(Long id) {
         return repository.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Complaint not found"));
+    }
+
+    private void indexComplaintForSimilarity(Complaint complaint) {
+        if (complaint == null || complaint.getId() == null || complaint.getMaskedText() == null) {
+            return;
+        }
+        try {
+            var webClient = webClientBuilder.baseUrl(Objects.requireNonNull(aiServiceUrl)).build();
+            webClient.post()
+                    .uri("/index-complaint")
+                    .bodyValue(java.util.Map.of(
+                            "complaint_id", complaint.getId().toString(),
+                            "masked_text", complaint.getMaskedText(),
+                            "category", complaint.getCategory() != null ? complaint.getCategory() : "",
+                            "status", complaint.getStatus() != null ? complaint.getStatus().name() : "",
+                            "created_at", complaint.getCreatedAt() != null ? complaint.getCreatedAt().toString() : ""))
+                    .retrieve()
+                    .toBodilessEntity()
+                    .block(AI_TIMEOUT);
+        } catch (Exception e) {
+            logger.warn("Similarity indexing failed for complaint_id={}: {}", complaint.getId(), e.getMessage());
+        }
     }
 }

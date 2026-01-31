@@ -32,6 +32,9 @@ public class DTOs {
     @NoArgsConstructor
     public static class TriageRequest {
         private String text;
+
+        @JsonProperty("already_masked")
+        private boolean alreadyMasked = false;
     }
 
     @Data
@@ -53,6 +56,9 @@ public class DTOs {
     public static class RAGRequest {
         private String text;
         private String category;
+
+        @JsonProperty("already_masked")
+        private boolean alreadyMasked = false;
     }
 
     @Data
@@ -71,6 +77,9 @@ public class DTOs {
 
         @JsonProperty("relevant_sources")
         private List<SourceItem> relevantSources;
+
+        @JsonProperty("already_masked")
+        private boolean alreadyMasked = false;
     }
 
     @Data
