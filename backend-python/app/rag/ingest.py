@@ -18,7 +18,17 @@ def ingest_data():
     print("Initializing ChromaDB for ingestion...")
     db_path = os.path.join(os.getcwd(), "chroma_db")
     client = chromadb.PersistentClient(path=db_path)
-    embedding_fn = embedding_functions.DefaultEmbeddingFunction()
+    embedding_mode = os.getenv("RAG_EMBEDDING_MODE", "").lower()
+    embedding_model = os.getenv(
+        "RAG_EMBEDDING_MODEL",
+        "paraphrase-multilingual-MiniLM-L12-v2"
+    )
+    if embedding_mode == "default" or embedding_model.lower() == "default":
+        embedding_fn = embedding_functions.DefaultEmbeddingFunction()
+    else:
+        embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
+            model_name=embedding_model
+        )
     
     # Delete existing to start fresh
     try:

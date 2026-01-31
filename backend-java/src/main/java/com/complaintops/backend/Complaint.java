@@ -61,6 +61,7 @@ public class Complaint {
 enum ComplaintStatus {
     NEW,
     MASKING_FAILED, // PII maskeleme hatası - manuel inceleme gerekli
+    ON_HOLD,
     ANALYZED,
     RESOLVED,
     REJECTED

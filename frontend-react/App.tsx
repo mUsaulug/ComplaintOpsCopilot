@@ -9,7 +9,7 @@ import ComplaintInputCard from './components/ComplaintInputCard';
 import PipelineStatus from './components/PipelineStatus';
 import { Toaster, toast } from 'sonner';
 import { ComplaintData, CustomerSegment, ComplaintState, Priority } from './types';
-import { submitComplaint, findSimilarComplaints, approveComplaint, rejectComplaint, editComplaintResponse } from './services/backendService';
+import { submitComplaint, findSimilarComplaints, approveComplaint, rejectComplaint, editComplaintResponse, holdComplaint } from './services/backendService';
 import { adaptBackendResponse } from './services/dataAdapter';
 
 const INITIAL_COMPLAINT: ComplaintData = {
@@ -34,6 +34,7 @@ const App: React.FC = () => {
 
   const [draftResponse, setDraftResponse] = useState('');
   const [complaintDraft, setComplaintDraft] = useState('');
+  const [isDraftSaving, setIsDraftSaving] = useState(false);
 
   const runAnalysis = useCallback(async () => {
     if (complaintDraft.trim().length < 20) {
@@ -159,6 +160,29 @@ const App: React.FC = () => {
     }
   };
 
+  const handleSaveDraft = async (text: string) => {
+    if (!state.complaint.backendId) return;
+    setIsDraftSaving(true);
+    try {
+      await editComplaintResponse(
+        state.complaint.backendId,
+        text.trim(),
+        "Kullanıcı taslağı güncelledi."
+      );
+      setState(prev => ({
+        ...prev,
+        suggestion: prev.suggestion
+          ? { ...prev.suggestion, responseDraft: text }
+          : prev.suggestion
+      }));
+      toast.success("Taslak kaydedildi.");
+    } catch (err) {
+      toast.error("Taslak kaydetme başarısız.");
+    } finally {
+      setIsDraftSaving(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen overflow-hidden text-slate-900">
       <Toaster position="top-right" richColors />
@@ -199,6 +223,9 @@ const App: React.FC = () => {
             <ResponseEditor
               suggestion={state.suggestion}
               onTextChange={setDraftResponse}
+              onSave={handleSaveDraft}
+              isSaving={isDraftSaving}
+              canSave={!!state.complaint.backendId}
             />
 
             {state.complaint.sistemDurumu && (
@@ -267,7 +294,15 @@ const App: React.FC = () => {
 
           <ActionBar
             onApprove={handleApprove}
-            onHold={() => toast.info("Şikayet bekleme listesine alındı.")}
+            onHold={async () => {
+              if (!state.complaint.backendId) return;
+              try {
+                await holdComplaint(state.complaint.backendId, "Bekletildi.");
+                toast.info("Şikayet bekleme listesine alındı.");
+              } catch (err) {
+                toast.error("Bekletme işlemi başarısız.");
+              }
+            }}
             onReject={handleReject}
             isReady={!!state.analysis && !state.isLoading}
             confidenceScore={state.analysis?.confidenceScore || 0}

@@ -298,7 +298,42 @@ OPENROUTER_API_KEY=your-key LLM_PROVIDER=openrouter docker compose up -d
 
 ### POST /api/analyze (English)
 
-Same functionality, returns raw English fields.
+**Request:**
+```json
+{
+  "text": "I cannot login to the mobile app."
+}
+```
+
+**Response:**
+```json
+{
+  "id": 42,
+  "masked_text": "I cannot login to the mobile app.",
+  "category": "ACCESS_LOGIN_MOBILE",
+  "urgency": "MEDIUM",
+  "recommendation": "We are reviewing your access issue...",
+  "status": "ANALYZED",
+  "sources": [
+    {
+      "dokuman_adi": "sop_1",
+      "kaynak": "Bank_SOP_v1",
+      "ozet": "Mobil giriş sorunlarında..."
+    }
+  ],
+  "needs_human_review": false,
+  "review_id": null,
+  "confidence_scores": {
+    "kategori": 0.77,
+    "oncelik": 0.68
+  },
+  "system_status": {
+    "rag_durumu": "OK",
+    "llm_durumu": "OK"
+  },
+  "review_sync_failed": false
+}
+```
 
 ### GET /api/complaints
 
@@ -307,6 +342,10 @@ List all processed complaints.
 ### GET /api/complaints/{id}
 
 Get complaint by ID.
+
+### POST /api/complaints/{id}/hold
+
+Move complaint to on-hold status.
 
 ---
 

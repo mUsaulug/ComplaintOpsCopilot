@@ -131,3 +131,12 @@ export async function rejectComplaint(complaintId: number, notes?: string): Prom
   });
   if (!response.ok) throw new Error("Reddetme hatası");
 }
+
+export async function holdComplaint(complaintId: number, notes?: string): Promise<void> {
+  const response = await fetchWithRetry(`${BACKEND_URL}/api/complaints/${complaintId}/hold`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    body: JSON.stringify({ notes: notes || '' })
+  });
+  if (!response.ok) throw new Error("Bekletme hatası");
+}
