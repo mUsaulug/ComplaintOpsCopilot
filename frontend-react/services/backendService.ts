@@ -60,7 +60,14 @@ export async function submitComplaint(text: string): Promise<BackendComplaintRes
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`Backend hatası (${response.status}): ${errorBody}`);
+    let message = errorBody;
+    try {
+      const parsed = JSON.parse(errorBody);
+      message = parsed.detail || parsed.error || parsed.message || errorBody;
+    } catch (err) {
+      // Keep raw text if not JSON
+    }
+    throw new Error(`Backend hatası (${response.status}): ${message}`);
   }
 
   return await response.json();
@@ -123,4 +130,13 @@ export async function rejectComplaint(complaintId: number, notes?: string): Prom
     body: JSON.stringify({ notes: notes || '' })
   });
   if (!response.ok) throw new Error("Reddetme hatası");
+}
+
+export async function holdComplaint(complaintId: number, notes?: string): Promise<void> {
+  const response = await fetchWithRetry(`${BACKEND_URL}/api/complaints/${complaintId}/hold`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    body: JSON.stringify({ notes: notes || '' })
+  });
+  if (!response.ok) throw new Error("Bekletme hatası");
 }

@@ -6,9 +6,12 @@ import { Icons } from '../constants';
 interface Props {
   suggestion: Suggestion | null;
   onTextChange: (text: string) => void;
+  onSave: (text: string) => void;
+  isSaving: boolean;
+  canSave: boolean;
 }
 
-const ResponseEditor: React.FC<Props> = ({ suggestion, onTextChange }) => {
+const ResponseEditor: React.FC<Props> = ({ suggestion, onTextChange, onSave, isSaving, canSave }) => {
   const [text, setText] = useState('');
 
   useEffect(() => {
@@ -57,6 +60,19 @@ const ResponseEditor: React.FC<Props> = ({ suggestion, onTextChange }) => {
             ✨ Empatik Yap
           </button>
         </div>
+      </div>
+      <div className="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => onSave(text)}
+          disabled={!canSave || isSaving}
+          className={`px-3 py-1 text-[10px] font-bold rounded border transition-colors
+            ${canSave && !isSaving
+              ? 'text-blue-600 border-blue-200 hover:bg-blue-50'
+              : 'text-slate-400 border-slate-200 bg-slate-50 cursor-not-allowed'}`}
+        >
+          {isSaving ? 'Kaydediliyor...' : 'Taslağı Kaydet'}
+        </button>
       </div>
 
       <div className="relative group">

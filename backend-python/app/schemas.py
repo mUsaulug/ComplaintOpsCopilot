@@ -23,7 +23,7 @@ class SourceItem(BaseModel):
     snippet: str
     source: str
     doc_name: str
-    chunk_id: str
+    chunk_id: Optional[str] = None
 
 
 # --- API Contract Models ---
@@ -98,5 +98,5 @@ class LLMResponse(BaseModel):
     action_plan: list[str] = Field(min_length=1)
     customer_reply_draft: str = Field(min_length=1)
     category: Optional[CategoryLiteral] = None
-    risk_flags: list[str] = Field(min_length=1)
+    risk_flags: list[str] = Field(default_factory=list)
     sources: list[SourceItem] = Field(default_factory=list)

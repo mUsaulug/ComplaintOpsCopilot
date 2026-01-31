@@ -270,6 +270,7 @@ OPENROUTER_API_KEY=your-key LLM_PROVIDER=openrouter docker compose up -d
 ```json
 {
   "id": 42,
+  "maskedText": "Kartımdan [MASKED_AMOUNT] TL çekilmiş.",
   "kategori": "DOLANDIRICILIK_YETKISIZ_ISLEM",
   "oncelik": "YUKSEK",
   "oneri": "Sayın müşterimiz, kartınız güvenlik nedeniyle bloke edilmiştir...",
@@ -280,13 +281,59 @@ OPENROUTER_API_KEY=your-key LLM_PROVIDER=openrouter docker compose up -d
       "kaynak": "Bank_SOP_v1",
       "ozet": "Fraud Şüphesi: Karttan bilgisi dışında işlem yapıldığını..."
     }
-  ]
+  ],
+  "insan_incelemesi_gerekli": false,
+  "review_id": null,
+  "guven_skorlari": {
+    "kategori": 0.82,
+    "oncelik": 0.76
+  },
+  "sistem_durumu": {
+    "rag_durumu": "OK",
+    "llm_durumu": "OK"
+  },
+  "review_sync_failed": false
 }
 ```
 
 ### POST /api/analyze (English)
 
-Same functionality, returns raw English fields.
+**Request:**
+```json
+{
+  "text": "I cannot login to the mobile app."
+}
+```
+
+**Response:**
+```json
+{
+  "id": 42,
+  "masked_text": "I cannot login to the mobile app.",
+  "category": "ACCESS_LOGIN_MOBILE",
+  "urgency": "MEDIUM",
+  "recommendation": "We are reviewing your access issue...",
+  "status": "ANALYZED",
+  "sources": [
+    {
+      "dokuman_adi": "sop_1",
+      "kaynak": "Bank_SOP_v1",
+      "ozet": "Mobil giriş sorunlarında..."
+    }
+  ],
+  "needs_human_review": false,
+  "review_id": null,
+  "confidence_scores": {
+    "kategori": 0.77,
+    "oncelik": 0.68
+  },
+  "system_status": {
+    "rag_durumu": "OK",
+    "llm_durumu": "OK"
+  },
+  "review_sync_failed": false
+}
+```
 
 ### GET /api/complaints
 
@@ -296,6 +343,10 @@ List all processed complaints.
 
 Get complaint by ID.
 
+### POST /api/complaints/{id}/hold
+
+Move complaint to on-hold status.
+
 ---
 
 ## 🔐 Güvenlik & KVKK
@@ -304,7 +355,7 @@ Get complaint by ID.
 |---------|----------|
 | **No Raw Text in DB** | `Complaint.originalText` alanı yok |
 | **Fail-Closed PII** | Maskeleme hatası → `MASKING_FAILED` status |
-| **Log Sanitization** | Sadece `masked_text_length` loglanır |
+| **Log Sanitization** | Sadece `masked_text_length` ve `masked_entity_count` loglanır |
 | **Prompt Injection Guard** | `<system>`, ` ``` ` tag'leri temizlenir |
 | **PII Leak Detection** | LLM çıktısı tekrar PII taramasından geçer, tespit edilirse bloklanır |
 | **WebClient Timeouts** | 10s masking, 30s AI çağrıları için timeout |
@@ -320,7 +371,8 @@ mvn test
 
 # Python testleri
 cd backend-python
-pytest test_kvkk_compliance.py -v
+# Offline/CI için (Presidio model indirmeden çalıştırır)
+PII_REGEX_ONLY=true pytest test_kvkk_compliance.py -v
 
 # Frontend build
 cd frontend-react
@@ -396,7 +448,7 @@ ComplaintOpsCopilot/
 | **PII Maskeleme çöker** | Pipeline durur, raw text korunur, `MASKELEME_HATASI` döner |
 | **RAG erişilemez** | Boş kaynak listesi, LLM devam eder |
 | **LLM API çöker** | Template yanıt döner |
-| **Triage hatası** | Varsayılan: `MANUEL_INCELEME`, `YUKSEK` öncelik |
+| **Triage hatası** | Varsayılan: `UNKNOWN` kategori, `ORTA` öncelik, `insan_incelemesi_gerekli: true` |
 | **Düşük güven skoru** | `insan_incelemesi_gerekli: true`, review kaydı oluşur |
 | **WebClient timeout** | 10s (mask) / 30s (AI) sonra graceful degradation |
 

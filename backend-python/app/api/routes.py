@@ -46,11 +46,11 @@ def log_sanitized_request(
     request_id: str,
 ) -> None:
     logger.info(
-        "request_received endpoint=%s request_id=%s masked_text_length=%s masked_entity_types=%s",
+        "request_received endpoint=%s request_id=%s masked_text_length=%s masked_entity_count=%s",
         endpoint,
         request_id,
         len(masked_text),
-        ",".join(masked_entities),
+        len(masked_entities),
     )
 
 @router.post("/mask", response_model=MaskingResponse)
@@ -310,36 +310,6 @@ def index_complaint(payload: IndexComplaintRequest, request: Request):
     if not success:
         raise HTTPException(status_code=500, detail="Failed to index complaint")
     return {"status": "indexed", "complaint_id": payload.complaint_id}
-
-@router.post("/similar/{complaint_id}")
-def find_similar_complaints_post(
-    complaint_id: str,
-    payload: SimilarQueryRequest,
-    request: Request,
-):
-    """Find complaints similar to the given query text (POST variant)."""
-    request_id = request.state.request_id
-    if payload.already_masked:
-        scan_result = scan_text(payload.query_text)
-        if scan_result.contains_pii:
-            logger.error(
-                "raw_text_rejected request_id=%s entity_types=%s",
-                request_id,
-                ",".join(sorted(set(scan_result.entity_types))),
-            )
-            raise HTTPException(status_code=400, detail="RAW_TEXT_REJECTED")
-        masked_text = payload.query_text
-    else:
-        masked_text = sanitize_input(payload.query_text, request_id)["masked_text"]
-    results = similarity_service.find_similar(
-        query_text=masked_text,
-        n_results=payload.limit,
-        exclude_id=complaint_id
-    )
-    return SimilarComplaintsResponse(
-        similar_complaints=results,
-        total_indexed=similarity_service.get_collection_count()
-    )
 
 @router.post("/similar/{complaint_id}")
 def find_similar_complaints_post(

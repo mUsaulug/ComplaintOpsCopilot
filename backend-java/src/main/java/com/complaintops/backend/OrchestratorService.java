@@ -93,7 +93,8 @@ public class OrchestratorService {
         }
 
         String safeText = maskResp.getMaskedText();
-        logger.info("PII masking successful. Masked entities: {}", maskResp.getMaskedEntities());
+        int maskedCount = maskResp.getMaskedEntities() != null ? maskResp.getMaskedEntities().size() : 0;
+        logger.info("PII masking successful. masked_entity_count={}", maskedCount);
 
         // 2. Triage (with confidence tracking)
         DTOs.TriageResponseFull triageResp;

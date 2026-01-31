@@ -41,8 +41,9 @@ public class ComplaintController {
     }
 
     @PostMapping("/analyze")
-    public Complaint analyzeComplaint(@RequestBody ComplaintRequest request) {
-        return orchestratorService.analyzeComplaint(request.getText());
+    public ResponseEntity<AnalyzeResponse> analyzeComplaint(@RequestBody ComplaintRequest request) {
+        Complaint complaint = orchestratorService.analyzeComplaint(request.getText());
+        return ResponseEntity.ok(mapToAnalyzeResponse(complaint));
     }
 
     /**
@@ -175,6 +176,15 @@ public class ComplaintController {
         return ResponseEntity.ok(complaintRepository.save(complaint));
     }
 
+    @PostMapping("/complaints/{id}/hold")
+    public ResponseEntity<Complaint> holdComplaint(
+            @PathVariable Long id,
+            @RequestBody(required = false) ApprovalRequest request) {
+        Complaint complaint = orchestratorService.getComplaint(id);
+        complaint.setStatus(ComplaintStatus.ON_HOLD);
+        return ResponseEntity.ok(complaintRepository.save(complaint));
+    }
+
     @PostMapping("/complaints/{id}/reject")
     public ResponseEntity<Complaint> rejectComplaint(
             @PathVariable Long id,
@@ -238,6 +248,7 @@ public class ComplaintController {
         return switch (status) {
             case NEW -> "YENI";
             case MASKING_FAILED -> "MASKELEME_HATASI";
+            case ON_HOLD -> "BEKLEMEDE";
             case ANALYZED -> "ANALIZ_EDILDI";
             case RESOLVED -> "COZUMLENDI";
             case REJECTED -> "REDDEDILDI";
@@ -273,6 +284,28 @@ public class ComplaintController {
         } catch (Exception e) {
             return new ArrayList<>();
         }
+    }
+
+    private AnalyzeResponse mapToAnalyzeResponse(Complaint complaint) {
+        AnalyzeResponse response = new AnalyzeResponse();
+        response.setId(complaint.getId());
+        response.setMaskedText(complaint.getMaskedText());
+        response.setCategory(complaint.getCategory());
+        response.setUrgency(complaint.getUrgency());
+        response.setRecommendation(buildOneri(complaint));
+        response.setStatus(complaint.getStatus() != null ? complaint.getStatus().name() : "NEW");
+        response.setSources(parseKaynaklar(complaint.getSources()));
+        response.setNeedsHumanReview(
+                complaint.getNeedsHumanReview() != null ? complaint.getNeedsHumanReview() : false);
+        response.setReviewId(complaint.getReviewId());
+        response.setConfidenceScores(new GuvenSkorlari(
+                complaint.getCategoryConfidence(),
+                complaint.getUrgencyConfidence()));
+        response.setSystemStatus(new SistemDurumu(
+                complaint.getRagStatus(),
+                complaint.getLlmStatus()));
+        response.setReviewSyncFailed(complaint.isReviewSyncFailed());
+        return response;
     }
 
     // Request/Response DTOs for /api/sikayet
@@ -324,6 +357,42 @@ public class ComplaintController {
 
         @JsonProperty("sistem_durumu")
         private SistemDurumu sistemDurumu; // Graceful degradation status
+
+        @JsonProperty("review_sync_failed")
+        private boolean reviewSyncFailed;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AnalyzeResponse {
+        private Long id;
+
+        @JsonProperty("masked_text")
+        private String maskedText;
+
+        private String category;
+        private String urgency;
+
+        @JsonProperty("recommendation")
+        private String recommendation;
+
+        private String status;
+
+        @JsonProperty("sources")
+        private List<KaynakItem> sources;
+
+        @JsonProperty("needs_human_review")
+        private Boolean needsHumanReview;
+
+        @JsonProperty("review_id")
+        private String reviewId;
+
+        @JsonProperty("confidence_scores")
+        private GuvenSkorlari confidenceScores;
+
+        @JsonProperty("system_status")
+        private SistemDurumu systemStatus;
 
         @JsonProperty("review_sync_failed")
         private boolean reviewSyncFailed;
