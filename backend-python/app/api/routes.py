@@ -311,22 +311,16 @@ def index_complaint(payload: IndexComplaintRequest, request: Request):
         raise HTTPException(status_code=500, detail="Failed to index complaint")
     return {"status": "indexed", "complaint_id": payload.complaint_id}
 
-@router.get("/similar/{complaint_id}")
-def find_similar_complaints(
+@router.post("/similar/{complaint_id}")
+def find_similar_complaints_post(
     complaint_id: str,
-    query_text: str,
-    limit: int = 5,
-    request: Request = None,
-    already_masked: bool = False,
+    payload: SimilarQueryRequest,
+    request: Request,
 ):
-    """Find complaints similar to the given query text (deprecated GET)."""
-    logger.warning(
-        "deprecated_endpoint endpoint=/similar/{complaint_id} request_id=%s",
-        request.state.request_id if request else "-"
-    )
-    request_id = request.state.request_id if request else "-"
-    if already_masked:
-        scan_result = scan_text(query_text)
+    """Find complaints similar to the given query text (POST variant)."""
+    request_id = request.state.request_id
+    if payload.already_masked:
+        scan_result = scan_text(payload.query_text)
         if scan_result.contains_pii:
             logger.error(
                 "raw_text_rejected request_id=%s entity_types=%s",
@@ -334,12 +328,12 @@ def find_similar_complaints(
                 ",".join(sorted(set(scan_result.entity_types))),
             )
             raise HTTPException(status_code=400, detail="RAW_TEXT_REJECTED")
-        sanitized = {"masked_text": query_text}
+        masked_text = payload.query_text
     else:
-        sanitized = sanitize_input(query_text, request_id)
+        masked_text = sanitize_input(payload.query_text, request_id)["masked_text"]
     results = similarity_service.find_similar(
-        query_text=sanitized["masked_text"],
-        n_results=limit,
+        query_text=masked_text,
+        n_results=payload.limit,
         exclude_id=complaint_id
     )
     return SimilarComplaintsResponse(

@@ -61,6 +61,11 @@ const SmartComplaintViewer: React.FC<Props> = ({ data }) => {
           <div className="text-right">
             <p className="text-xs font-mono text-slate-400">{data.id}</p>
             <p className="text-xs text-slate-500 mt-1">🕒 {new Date(data.timestamp).toLocaleTimeString()}</p>
+            {data.durum && (
+              <span className="inline-flex items-center mt-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide rounded-full bg-slate-200 text-slate-700">
+                {data.durum}
+              </span>
+            )}
           </div>
         </div>
 
@@ -91,6 +96,13 @@ const SmartComplaintViewer: React.FC<Props> = ({ data }) => {
             <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg flex gap-2 items-center text-red-700 text-xs font-bold">
               <Icons.Alert />
               <span>KRİTİK: Maskeleme servisi yanıt vermedi. İçerik güvenlik nedeniyle gizlendi.</span>
+            </div>
+          )}
+
+          {data.reviewSyncFailed && (
+            <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg flex gap-2 items-center text-amber-800 text-xs font-bold">
+              <Icons.Alert />
+              <span>Uyarı: İnceleme senkronizasyonu tamamlanamadı. Lütfen tekrar deneyin.</span>
             </div>
           )}
 
