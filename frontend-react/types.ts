@@ -55,6 +55,8 @@ export interface ComplaintData {
   insanIncelemesiGerekli?: boolean;
   reviewId?: string;
   sistemDurumu?: BackendSistemDurumu;
+  reviewSyncFailed?: boolean;
+  durum?: string;
 }
 
 export interface BackendSistemDurumu {
@@ -85,6 +87,7 @@ export interface BackendComplaintResponse {
   review_id: string;
   guven_skorlari: BackendGuvenSkorlari;
   sistem_durumu: BackendSistemDurumu;
+  review_sync_failed: boolean;
 }
 
 export interface KBArticle {
@@ -110,12 +113,12 @@ export interface Suggestion {
 }
 
 export interface SimilarComplaint {
-  id: number;
+  id: string;
   masked_text: string;
-  category: string;
+  category?: string;
   similarity_score: number;
-  created_at: string;
-  status: string;
+  created_at?: string;
+  status?: string;
 }
 
 export interface ComplaintState {

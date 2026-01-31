@@ -12,6 +12,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.ArrayList;
 import java.time.Duration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api")
@@ -23,6 +25,7 @@ public class ComplaintController {
     private final ComplaintEditRepository editRepository;
     private final org.springframework.web.reactive.function.client.WebClient.Builder webClientBuilder;
     private static final Duration SERVICE_TIMEOUT = Duration.ofSeconds(120);
+    private static final Logger logger = LoggerFactory.getLogger(ComplaintController.class);
 
     @org.springframework.beans.factory.annotation.Value("${ai-service.url}")
     private String aiServiceUrl;
@@ -75,6 +78,8 @@ public class ComplaintController {
                 complaint.getRagStatus(),
                 complaint.getLlmStatus()));
 
+        response.setReviewSyncFailed(complaint.isReviewSyncFailed());
+
         return ResponseEntity.ok(response);
     }
 
@@ -84,16 +89,17 @@ public class ComplaintController {
     public ResponseEntity<?> findSimilarComplaints(
             @PathVariable Long id,
             @RequestParam(defaultValue = "5") int limit) {
+        logger.warn("Deprecated endpoint used: GET /api/complaints/{}/similar", id);
         Complaint complaint = orchestratorService.getComplaint(id);
 
         try {
             var webClient = webClientBuilder.baseUrl(java.util.Objects.requireNonNull(aiServiceUrl)).build();
-            var response = webClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/similar/{id}")
-                            .queryParam("query_text", complaint.getMaskedText())
-                            .queryParam("limit", limit)
-                            .build(id))
+            var response = webClient.post()
+                    .uri("/similar/{id}", id)
+                    .bodyValue(java.util.Map.of(
+                            "query_text", complaint.getMaskedText(),
+                            "limit", limit,
+                            "already_masked", true))
                     .retrieve()
                     .bodyToMono(java.util.Map.class)
                     .block(SERVICE_TIMEOUT);
@@ -143,6 +149,7 @@ public class ComplaintController {
             @PathVariable Long id,
             @RequestBody(required = false) ApprovalRequest request) {
         Complaint complaint = orchestratorService.getComplaint(id);
+        boolean reviewSyncFailed = false;
 
         // If has review_id, call Python to update review status
         if (complaint.getReviewId() != null) {
@@ -157,12 +164,14 @@ public class ComplaintController {
                         .toBodilessEntity()
                         .block(SERVICE_TIMEOUT);
             } catch (Exception e) {
-                // Log but don't fail - Python review is optional
+                logger.warn("Review approve failed for complaint_id={} review_id={}: {}", id, complaint.getReviewId(), e.getMessage());
+                reviewSyncFailed = true;
             }
         }
 
         // Update complaint status
         complaint.setStatus(ComplaintStatus.RESOLVED);
+        complaint.setReviewSyncFailed(reviewSyncFailed);
         return ResponseEntity.ok(complaintRepository.save(complaint));
     }
 
@@ -171,6 +180,7 @@ public class ComplaintController {
             @PathVariable Long id,
             @RequestBody(required = false) ApprovalRequest request) {
         Complaint complaint = orchestratorService.getComplaint(id);
+        boolean reviewSyncFailed = false;
 
         // If has review_id, call Python to update review status
         if (complaint.getReviewId() != null) {
@@ -185,11 +195,13 @@ public class ComplaintController {
                         .toBodilessEntity()
                         .block(SERVICE_TIMEOUT);
             } catch (Exception e) {
-                // Log but don't fail
+                logger.warn("Review reject failed for complaint_id={} review_id={}: {}", id, complaint.getReviewId(), e.getMessage());
+                reviewSyncFailed = true;
             }
         }
 
-        // Keep status as NEW or set a REJECTED status if needed
+        complaint.setStatus(ComplaintStatus.REJECTED);
+        complaint.setReviewSyncFailed(reviewSyncFailed);
         return ResponseEntity.ok(complaintRepository.save(complaint));
     }
 
@@ -228,6 +240,7 @@ public class ComplaintController {
             case MASKING_FAILED -> "MASKELEME_HATASI";
             case ANALYZED -> "ANALIZ_EDILDI";
             case RESOLVED -> "COZUMLENDI";
+            case REJECTED -> "REDDEDILDI";
         };
     }
 
@@ -311,6 +324,9 @@ public class ComplaintController {
 
         @JsonProperty("sistem_durumu")
         private SistemDurumu sistemDurumu; // Graceful degradation status
+
+        @JsonProperty("review_sync_failed")
+        private boolean reviewSyncFailed;
     }
 
     @Data

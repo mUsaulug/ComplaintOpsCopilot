@@ -61,7 +61,9 @@ const App: React.FC = () => {
           // Backend fields for HITL and explainability
           insanIncelemesiGerekli: backendResult.insan_incelemesi_gerekli,
           reviewId: backendResult.review_id,
-          sistemDurumu: backendResult.sistem_durumu
+          sistemDurumu: backendResult.sistem_durumu,
+          reviewSyncFailed: backendResult.review_sync_failed,
+          durum: backendResult.durum
         },
         analysis,
         suggestion,
@@ -209,6 +211,14 @@ const App: React.FC = () => {
                     label: 'İnceleme',
                     state: state.complaint.insanIncelemesiGerekli ? 'warning' : 'ok',
                     detail: state.complaint.insanIncelemesiGerekli ? 'İnsan kontrolü gerekli' : 'Otomatik uygun',
+                  },
+                  {
+                    id: 'review-sync',
+                    label: 'Review Sync',
+                    state: state.complaint.reviewSyncFailed ? 'warning' : 'ok',
+                    detail: state.complaint.reviewSyncFailed
+                      ? 'İnceleme durumu senkronize edilemedi'
+                      : 'Senkron tamam',
                   },
                 ]}
               />
