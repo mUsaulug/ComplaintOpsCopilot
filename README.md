@@ -431,14 +431,6 @@ ComplaintOpsCopilot/
 
 ---
 
-## 🎬 Demo Senaryosu (2 Dakika)
-
-1. Frontend’i açın: `http://localhost:3000`
-2. Örnek şikayet girin ve **Analizi Başlat**’a tıklayın.
-3. Pipeline kartlarında Maskeleme → Triage → RAG → LLM → İnceleme durumlarını izleyin.
-4. Kanıt kartlarından SOP özetlerini kontrol edin.
-5. “İncele & Gönder” ile insan onayını simüle edin.
-
 ---
 
 ## ⚠️ Failure Modes (Hata Senaryoları)
