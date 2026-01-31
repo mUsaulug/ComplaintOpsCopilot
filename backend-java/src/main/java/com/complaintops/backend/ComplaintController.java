@@ -12,6 +12,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.ArrayList;
 import java.time.Duration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api")
@@ -23,6 +25,7 @@ public class ComplaintController {
     private final ComplaintEditRepository editRepository;
     private final org.springframework.web.reactive.function.client.WebClient.Builder webClientBuilder;
     private static final Duration SERVICE_TIMEOUT = Duration.ofSeconds(120);
+    private static final Logger logger = LoggerFactory.getLogger(ComplaintController.class);
 
     @org.springframework.beans.factory.annotation.Value("${ai-service.url}")
     private String aiServiceUrl;
@@ -88,12 +91,12 @@ public class ComplaintController {
 
         try {
             var webClient = webClientBuilder.baseUrl(java.util.Objects.requireNonNull(aiServiceUrl)).build();
-            var response = webClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/similar/{id}")
-                            .queryParam("query_text", complaint.getMaskedText())
-                            .queryParam("limit", limit)
-                            .build(id))
+            var response = webClient.post()
+                    .uri("/similar/{id}", id)
+                    .bodyValue(java.util.Map.of(
+                            "query_text", complaint.getMaskedText(),
+                            "limit", limit,
+                            "already_masked", true))
                     .retrieve()
                     .bodyToMono(java.util.Map.class)
                     .block(SERVICE_TIMEOUT);
@@ -157,7 +160,7 @@ public class ComplaintController {
                         .toBodilessEntity()
                         .block(SERVICE_TIMEOUT);
             } catch (Exception e) {
-                // Log but don't fail - Python review is optional
+                logger.warn("Review approve failed for complaint_id={} review_id={}: {}", id, complaint.getReviewId(), e.getMessage());
             }
         }
 
@@ -185,7 +188,7 @@ public class ComplaintController {
                         .toBodilessEntity()
                         .block(SERVICE_TIMEOUT);
             } catch (Exception e) {
-                // Log but don't fail
+                logger.warn("Review reject failed for complaint_id={} review_id={}: {}", id, complaint.getReviewId(), e.getMessage());
             }
         }
 

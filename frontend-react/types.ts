@@ -110,12 +110,12 @@ export interface Suggestion {
 }
 
 export interface SimilarComplaint {
-  id: number;
+  id: string;
   masked_text: string;
-  category: string;
+  category?: string;
   similarity_score: number;
-  created_at: string;
-  status: string;
+  created_at?: string;
+  status?: string;
 }
 
 export interface ComplaintState {
