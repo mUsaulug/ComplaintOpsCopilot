@@ -22,6 +22,7 @@ Sistemin Temel Özellikleri
 - Log sanitization ve request_id ile izlenebilirlik. Kanıt/İz: backend-python/app/core/logging.py, backend-python/app/main.py.
 - Uçtan uca UI akışı: şikayet girişi → analiz → öneri → onay/ret/hold. Kanıt/İz: frontend-react/App.tsx.
 - Mevcut ölçümler: eval_results.json içinde kategori doğruluk ve gecikme metrikleri mevcut; aksi performans ölçümleri TBD. Kanıt/İz: docs/evidence/eval_results.json.
+Ek bağlam: Sistem, KVKK ilkelerine göre ham metin taşımayı ve depolamayı reddederek veri minimizasyonu sağlar; bu yaklaşım hem API sözleşmelerinde hem de veri modeli ve log formatında tutarlı şekilde uygulanır. Kanıt/İz: backend-java/src/main/java/com/complaintops/backend/Complaint.java; backend-python/app/core/logging.py.
 
 1. Amaç ve Kapsam
 1.1 Amaç
@@ -40,6 +41,7 @@ Python AI service, FastAPI ile maskeleme, triage, RAG ve LLM üretimi gibi çeki
 PostgreSQL, şikayet kayıtlarının maskedText ve analiz sonuçlarıyla birlikte tutulduğu ana veritabanıdır. Kanıt/İz: backend-java/src/main/resources/application.properties.
 ChromaDB, SOP ve complaint embedding indeksleri için persistent vektör veri deposu sağlar. Kanıt/İz: backend-python/app/services/rag_service.py; backend-python/app/services/similarity_service.py.
 SQLite tabanlı review store, insan-in-the-loop kararlarının audit edilebilmesi için review kayıtlarını saklar. Kanıt/İz: backend-python/app/services/review_service.py.
+LLM sağlayıcı katmanı, farklı sağlayıcılar arasında seçim yaparak yanıt üretimini soyutlar; başarısız durumda mock/fallback davranışı devreye girebilir. Kanıt/İz: backend-python/app/services/llm_service.py.
 
 2.2 Uçtan Uca Akış Özeti
 Kullanıcı UI üzerinden şikayet metni gönderir ve Java orchestrator /api/sikayet üzerinden süreci başlatır. Kanıt/İz: frontend-react/services/backendService.ts; backend-java/src/main/java/com/complaintops/backend/ComplaintController.java.
@@ -47,6 +49,7 @@ Orchestrator, önce /mask ile PII maskelemesi yapar; başarısızlıkta fail-clo
 Başarılı maskelemede /predict ile kategori ve aciliyet tahmini alınır, düşük güven durumunda review kaydı oluşturulur. Kanıt/İz: backend-python/app/api/routes.py.
 RAG /retrieve ile SOP kaynakları çekilir, /generate ile yanıt taslağı üretilir; üretim çıktısı tekrar PII taramasına girer. Kanıt/İz: backend-python/app/api/routes.py.
 Orchestrator şikayet kaydını veritabanına yazar, UI ise durum, öneri ve kaynakları gösterir. Kanıt/İz: backend-java/src/main/java/com/complaintops/backend/OrchestratorService.java; frontend-react/App.tsx.
+Benzer şikayetler, maskedText üzerinden embedding indeksine eklenir ve UI’da bağlamsal örnekler sunmak için listelenir. Kanıt/İz: backend-java/src/main/java/com/complaintops/backend/OrchestratorService.java; backend-python/app/services/similarity_service.py; frontend-react/App.tsx.
 
 2.3 Bileşen Sorumluluk Matrisi
 | Bileşen | Sorumluluk | İçermediği |
@@ -75,6 +78,38 @@ flowchart LR
 ```
 Diyagram Açıklaması
 Bu diyagram uçtan uca kullanıcı etkileşimini ve servisler arası veri akışını gösterir. React UI yalnızca HTTP üzerinden Java orchestrator ile konuşur; ham metin doğrudan Python servisine gitmez. Java orchestrator maskeleme, triage, RAG ve LLM üretimini sırayla çağırır ve sonuçları PostgreSQL’e kaydeder. Python AI servisi hem RAG hem de similarity için ChromaDB kullanır. Review Store, düşük güvenli tahminlerde audit trail tutan yardımcı bir bileşendir. Kanıt/İz: docker-compose.yml; backend-java/src/main/java/com/complaintops/backend/OrchestratorService.java; backend-python/app/api/routes.py.
+
+2.5 Platform Kalbi: Uçtan Uca İşleme Çekirdeği (Yeni Diyagram)
+```mermaid
+flowchart TB
+  subgraph Input
+    UI[React UI]
+    API[Java API Gateway]
+  end
+  subgraph Core
+    MASK[PII Masking]
+    TRI[Triage + Confidence]
+    RAG[RAG Retrieval]
+    GEN[LLM Generation]
+    PII[Output PII Scan]
+  end
+  subgraph State
+    DB[(PostgreSQL)]
+    REV[(Review Store)]
+  end
+  subgraph Knowledge
+    SOP[(ChromaDB SOP Index)]
+    SIM[(ChromaDB Similarity Index)]
+  end
+  UI --> API --> MASK --> TRI --> RAG --> GEN --> PII
+  TRI -->|Low Confidence| REV
+  RAG --> SOP
+  API --> DB
+  API --> SIM
+  PII --> API
+```
+Diyagram Açıklaması
+Bu diyagram sistemin “kalbini” oluşturan çekirdek işleme akışını tek bakışta gösterir. Girdi katmanı UI ve Java API üzerinden gelir, ardından maskeleme ve triage adımlarıyla güvenlik ve karar mantığı uygulanır. RAG aşaması SOP bilgi tabanına bağlıdır; LLM üretimi bu kaynaklarla zenginleşir. Üretilen çıktı tekrar PII taramasından geçirilerek fail-closed çizgisi korunur. Triage skorları düşükse review store’a kayıt açılır ve manuel onay iş akışı tetiklenir. Tüm bu süreç, PostgreSQL’e maskelenmiş verilerle yazılırken similarity indeksi ayrı bir bilgi katmanı sağlar. Kanıt/İz: backend-java/src/main/java/com/complaintops/backend/OrchestratorService.java; backend-python/app/api/routes.py; backend-python/app/services/rag_service.py; backend-python/app/services/similarity_service.py.
 
 3. Mimari Tasarım
 3.1 Sistem Bağlam Diyagramı (Context)
@@ -112,6 +147,7 @@ flowchart TB
 ```
 Diyagram Açıklaması
 İç mimari, UI, Java orchestrator ve Python AI servislerinin ayrık sorumluluklar taşıdığını gösterir. Java servis, workflow koordinasyonu ve DB yazımını üstlenirken, Python servis yalnızca AI adımlarını uygular. Review Store, ana DB’den ayrıştırılmıştır ve yalnızca insan-in-the-loop kayıtlarını taşır. ChromaDB, RAG ve similarity aramalarını destekleyen ayrı bir vektör katmanıdır. Bu ayrım, ham metnin DB’ye girmemesini ve sorumlulukların netleşmesini sağlar. Kanıt/İz: backend-java/src/main/java/com/complaintops/backend/OrchestratorService.java; backend-python/app/services/review_service.py.
+Separation-of-concerns açısından, Java katmanı model eğitimi ve embedding yönetimini içermez; Python katmanı ise UI iş mantığı ve ana DB erişimini içermez. Kanıt/İz: backend-java/src/main/java/com/complaintops/backend/OrchestratorService.java; backend-python/app/api/routes.py.
 
 3.3 Ana Akış (Sequence)
 ```mermaid
@@ -139,6 +175,7 @@ Ana akış, Türkçe API sözleşmesi üzerinden başlayan şikayet analiz süre
 3.4 Kritik Alt Akışlar
 Koşullu alt akış: “Maskeleme başarısızlığı → fail-closed”. Maskeleme servisi erişilemediğinde işlem hattı durur, MASKING_FAILED kaydı oluşturulur ve ham metin korunur; bu gate, gereksiz iş yükünü ve KVKK riskini engeller. Kanıt/İz: backend-java/src/main/java/com/complaintops/backend/OrchestratorService.java.
 İkinci alt akış: “Düşük güven → insan inceleme”. Triage skorları 0.60 altındaysa review kaydı oluşturulur ve sistem otomatik onay yerine incelemeye yönlendirir. Kanıt/İz: backend-python/app/api/routes.py.
+Üçüncü alt akış: “RAG kaynak yoksa fallback üretim”. /generate adımı kaynak eksikliği tespit ederse risk_flags alanına RAG_EMPTY_SOURCES veya RAG_FALLBACK_USED eklenir; bu, kalite uyarısı olarak downstream sistemlerde kullanılabilir. Kanıt/İz: backend-python/app/api/routes.py.
 
 4. API / Backend Katmanı (Arayüz Sözleşmeleri)
 4.1 Endpoint Envanteri (Tablo)
@@ -163,12 +200,18 @@ Koşullu alt akış: “Maskeleme başarısızlığı → fail-closed”. Maskel
 | POST | /similar/{complaint_id} | query_text, limit | similar_complaints | 400 (RAW_TEXT_REJECTED) |
 Kanıt/İz: backend-java/src/main/java/com/complaintops/backend/ComplaintController.java; backend-python/app/api/routes.py.
 
+Endpoint amaçları ve kritik doğrulamalar:
+POST /api/sikayet, Türkçe sözleşme üzerinden şikayet kabul eder ve maskelenmiş çıktıyı döner; raw metin hiçbir zaman response’a yazılmaz. Kanıt/İz: backend-java/src/main/java/com/complaintops/backend/ComplaintController.java.
+POST /predict ve /retrieve, already_masked=true iken PII içeriyorsa 400 ile fail-closed reddeder. Kanıt/İz: backend-python/app/api/routes.py.
+POST /generate, output PII sızıntısı tespit ederse PII_BLOCKED durumunda güvenlik metni döner. Kanıt/İz: backend-python/app/api/routes.py.
+
 4.2 Hata Durumları ve Beklenen Tepkiler
 - 400 RAW_TEXT_REJECTED: already_masked=true gönderilmesine rağmen PII tespit edilirse istek reddedilir. Kanıt/İz: backend-python/app/api/routes.py.
 - 404: Java tarafında Complaint bulunamazsa NOT_FOUND döner; review aksiyonlarında review kaydı yoksa 404 döner. Kanıt/İz: backend-java/src/main/java/com/complaintops/backend/OrchestratorService.java; backend-python/app/api/routes.py.
 - 500: Similarity index başarısızlığında 500 dönebilir; DB hatalarında Java tarafı 500 üretebilir (wrap edilmemiş). Kanıt/İz: backend-python/app/api/routes.py; backend-java/src/main/java/com/complaintops/backend/OrchestratorService.java.
 - 503: Maskeleme aşamasında hata, Python /mask endpoint’inde 503 olarak bildirilir. Kanıt/İz: backend-python/app/api/routes.py.
 - 401/403/429/413/422/503 (diğer): Repo içinde kanıt bulunamadı, TBD. Kanıt/İz: docs/audit/KVKK_SECURITY_MODEL.md.
+Fail-closed davranış, özellikle maskeleme ve PII taraması aşamalarında güvenlik duvarı gibi çalışır; bu hatalar kullanıcıya güvenlik odaklı bir yanıtla döner. Kanıt/İz: backend-java/src/main/java/com/complaintops/backend/OrchestratorService.java; backend-python/app/api/routes.py.
 
 4.3 Artifact / Dosya Sunumu / Çıktı Paketleme (Varsa)
 Bu projede analiz çıktıları tekil complaint kayıtları olarak PostgreSQL’de tutulur; run_id bazlı bir artifact paketleme yapısı bulunmuyor. Review store ise ayrı SQLite veritabanında saklanır. Kanıt/İz: backend-java/src/main/java/com/complaintops/backend/Complaint.java; backend-python/app/services/review_service.py.
@@ -178,6 +221,7 @@ Dokümantasyon ve kanıtlar için docs/evidence klasörü kullanılır; rapor ve
 5.1 Girdi Formatları ve Validasyon
 Python servisinde girdi text alanı maskeleme aşamasında iki katmanlı kontrolle temizlenir; already_masked=true ise PII taraması yapılarak ham metin reddedilir. Kanıt/İz: backend-python/app/api/routes.py; backend-python/app/services/pii_scan.py.
 Java tarafında TR/EN request DTO’ları belirli alanlarla sınırlıdır (metin/text). Kanıt/İz: backend-java/src/main/java/com/complaintops/backend/ComplaintController.java.
+Masking service, regex-only modunda çalıştırılabilir; bu mod CI/offline senaryolarında NLP model bağımlılığını devre dışı bırakır. Kanıt/İz: backend-python/app/services/masking_service.py.
 
 5.2 İşleme Adımları
 Adım 1: PII maskeleme (Presidio + regex failsafe). Kanıt/İz: backend-python/app/services/masking_service.py.
@@ -185,15 +229,18 @@ Adım 2: Triage (kategori + aciliyet), model metadata’sı latest.json üzerind
 Adım 3: RAG kaynak eşleştirme (ChromaDB). Kanıt/İz: backend-python/app/services/rag_service.py.
 Adım 4: LLM yanıt taslağı üretimi ve PII output taraması. Kanıt/İz: backend-python/app/api/routes.py.
 Adım 5: Java orchestrator sonuçları DB’ye yazar ve similarity index tetikler. Kanıt/İz: backend-java/src/main/java/com/complaintops/backend/OrchestratorService.java.
+Adım 6: UI tarafı sonuçları aksiyon barı üzerinden onay/ret/hold akışıyla sonlandırır. Kanıt/İz: frontend-react/App.tsx; frontend-react/services/backendService.ts.
 
 5.3 Karar Mantığı / Önceliklendirme
 Human review kararı, kategori veya aciliyet güven skorlarının < 0.60 olmasıyla tetiklenir; review_id oluşturulur. Kanıt/İz: backend-python/app/api/routes.py; docs/API_SCHEMA_TR_v2.md.
 Urgency mapping RED/YELLOW/GREEN → HIGH/MEDIUM/LOW olarak normalize edilir. Kanıt/İz: backend-python/app/services/triage_service.py.
+Triage modeli yüklenemezse kategori UNKNOWN, urgency MEDIUM ve needs_human_review=true varsayılanına düşer; bu davranış hata modunda güvenlikli default sağlar. Kanıt/İz: backend-java/src/main/java/com/complaintops/backend/OrchestratorService.java.
 
 5.4 Güvenlik ve Tutarlılık Kontrolleri
 Fail-closed maskeleme, maskeleme hatasında pipeline’ı durdurur ve raw text’i korur. Kanıt/İz: backend-java/src/main/java/com/complaintops/backend/OrchestratorService.java.
 LLM output tekrar PII taramasından geçirilir; sızıntı tespitinde PII_BLOCKED yanıtı üretilir. Kanıt/İz: backend-python/app/api/routes.py.
 Review verisi şifreleme opsiyonuna sahiptir ve retention policy uygulanır. Kanıt/İz: backend-python/app/services/review_service.py.
+Loglar JSON formatında request_id içerir; bu sayede uçtan uca izlenebilirlik sağlanır ve ham metin loglanmaz. Kanıt/İz: backend-python/app/core/logging.py.
 
 5.5 Performans Notları (Sadece kanıt varsa)
 Eval sonuçlarına göre kategori doğruluğu %90, aciliyet doğruluğu %0, PII leak rate %25, ortalama gecikme ~521 ms ve p95 gecikme ~797 ms olarak raporlanmıştır; bu metrikler yalnızca docs/evidence/eval_results.json’da kayıtlı ölçümlerle sınırlıdır. Kanıt/İz: docs/evidence/eval_results.json.
@@ -202,6 +249,7 @@ Model eğitim raporu, triage_v1 modelinin sınıf bazlı precision/recall metrik
 6. Açıklanabilirlik / Gözlemlenebilirlik / Raporlama
 6.1 Unified açıklama yaklaşımı
 RAG kaynakları ve LLM kaynak listeleri response içinde kaynaklara bağlanır; bu sayede her öneri SOP kaynaklarıyla izlenebilir. Kanıt/İz: backend-python/app/schemas.py; backend-java/src/main/java/com/complaintops/backend/ComplaintController.java.
+Yanıt taslağı düzenleme akışında yapılan değişiklikler complaint_edits tablosuna yazılarak izlenebilir bir audit trail oluşturulur. Kanıt/İz: backend-java/src/main/java/com/complaintops/backend/ComplaintEdit.java; backend-java/src/main/java/com/complaintops/backend/ComplaintController.java.
 
 6.2 Sanity Check / Quality Gate’ler
 | Kontrol | Eşik | Anlam |
@@ -214,10 +262,12 @@ Kanıt/İz: backend-python/app/api/routes.py.
 6.3 Kısıtlar ve Öneriler
 Kimlik doğrulama, rate limit ve merkezi audit log eksiktir; üretim kullanımında dış bir gateway katmanı önerilir. Kanıt/İz: docs/audit/KVKK_SECURITY_MODEL.md.
 Review audit verisi SQLite’da lokal tutulur; merkezi log ve WORM depolama için ek altyapı gerekir. Kanıt/İz: backend-python/app/services/review_service.py.
+Model performans metrikleri sınırlı bir eval setinden gelmektedir; gerçek üretim kalitesi için daha geniş benchmark ve ek veri setleri gereklidir (TBD). Kanıt/İz: docs/evidence/eval_results.json; backend-python/reports/model_card_20251226T235010Z.json.
 
 7. Kullanıcı Arayüzü ve Deneyimi (UI/UX)
 UI, şikayet girişi paneli, analiz/öneri kartları, pipeline durum göstergeleri ve action bar (onay/ret/beklet) akışını içerir. Kanıt/İz: frontend-react/App.tsx.
 Benzer şikayetler, similarity servisinden gelen masked_text ile listelenir ve kullanıcıya hızlı bağlam sağlar. Kanıt/İz: frontend-react/App.tsx; backend-python/app/services/similarity_service.py.
+Analiz tamamlandığında öneri metni edit edilebilir ve kaydedilebilir; bu işlem audit trail ile kayıt altına alınır. Kanıt/İz: frontend-react/App.tsx; backend-java/src/main/java/com/complaintops/backend/ComplaintController.java.
 
 Bu bölümde şu görsel yerleştirilecek:
 ![Analiz Sonuç Ekranı](TBD)
@@ -241,6 +291,7 @@ Kanıt/İz: backend-java/src/test/java/com/complaintops/backend/KvkkComplianceTe
 8.2 Reproducibility
 Model metadata’sı latest.json içinde dataset hash ve model path bilgileriyle izlenir; bu, model versiyon izlenebilirliğinin temelini sağlar. Kanıt/İz: backend-python/models/latest.json.
 Run-level determinism, seed yönetimi veya veri snapshot stratejisi için repo içinde kanıt bulunamadı, TBD. Kanıt/İz: docs/TESTING.md.
+Eval sonuçları docs/evidence altında JSON olarak saklanır ve raporlanabilir metrik seti sağlar. Kanıt/İz: docs/evidence/eval_results.json; docs/evidence/README.md.
 
 9. Gelecek Çalışmalar ve Yol Haritası
 Mevcut dokümanlar, MVP’de kritik ürün boşluklarını (auth/rate limit, contract testleri, audit) ve iki aşamalı iyileştirme planını tanımlar. Kanıt/İz: docs/audit/PRODUCT_GAPS_AND_ROADMAP.md.
